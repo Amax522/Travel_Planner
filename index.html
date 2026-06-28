@@ -369,8 +369,8 @@
                     <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
                         <div class="text-slate-400">Audio Synth State: <span id="diag-synth" class="text-indigo-400 font-bold">SLEEPING</span></div>
                         <div class="text-slate-400">Swaps Logged: <span id="diag-swaps" class="text-amber-400 font-bold">0</span></div>
-                        <div class="text-slate-400">Cloud Host: <span id="diag-cloud" class="text-emerald-400 font-bold">LOCAL</span></div>
-                        <div class="text-slate-400">Core Engine: <span class="text-emerald-400">Active</span></div>
+                        <div class="text-slate-400">Cloud Host: <span id="diag-cloud" class="text-emerald-400 font-bold">REALTIME DB</span></div>
+                        <div class="text-slate-400">Sync Frequency: <span class="text-emerald-400 font-bold">Reactive</span></div>
                     </div>
                 </div>
 
@@ -409,114 +409,27 @@
 
     </div>
 
-    <!-- Firebase SDK Modules Integration for Sharing/Persistence -->
+    <!-- Firebase Realtime Database Live Synchronization Layer -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-        // Global instances
-        let app, db, auth;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'chicago-trip-tracker';
-        
-        try {
-            if (typeof __firebase_config !== 'undefined') {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // Sign in anonymously first to authenticate
-                signInAnonymously(auth).then(() => {
-                    const syncStatus = document.getElementById('sync-status');
-                    if (syncStatus) syncStatus.textContent = "CLOUD ENGINE ACTIVE";
-                    
-                    const diagCloud = document.getElementById('diag-cloud');
-                    if (diagCloud) diagCloud.textContent = "FIRESTORE CLOUD";
-                    // Try loading existing trip parameters from URL query params
-                    loadTripFromCloud();
-                }).catch(err => {
-                    console.error("Firebase auth failing", err);
-                });
-            }
-        } catch (e) {
-            console.warn("Firebase not configured, fallback to standard offline modes", e);
-        }
+        // Provided specific Firebase Config Parameters
+        const firebaseConfig = {
+            apiKey: "AIzaSyDRTYFCvIj4sYgOjsqOI2DvzKC2vnm88Fo",
+            authDomain: "our-shared-app-84a08.firebaseapp.com",
+            databaseURL: "https://our-shared-app-84a08-default-rtdb.firebaseio.com",
+            projectId: "our-shared-app-84a08",
+            storageBucket: "our-shared-app-84a08.firebasestorage.app",
+            messagingSenderId: "191911816399",
+            appId: "1:191911816399:web:2d80ac6f06a4158f925bba"
+        };
 
-        // Expose functions globally for the button triggers
-        window.saveTripToCloud = async function() {
-            if (!db || !auth || !auth.currentUser) {
-                triggerToast("Firestore config is not found in local sandbox. Saved locally!");
-                return;
-            }
-            
-            const tripId = crypto.randomUUID();
-            const payload = {
-                lazyOffsetMinutes,
-                energyLevel,
-                loggedExpenses,
-                checklistItems,
-                ITINERARY_DATA,
-                customSwapsCount,
-                updatedAt: new Date().toISOString()
-            };
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbPath = 'shared_trip_tracker_state';
 
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', tripId);
-                await setDoc(docRef, payload);
-                
-                // Copy shareable link to clipboard
-                const shareableLink = `${window.location.origin}${window.location.pathname}?tripId=${tripId}`;
-                const dummy = document.createElement("textarea");
-                document.body.appendChild(dummy);
-                dummy.value = shareableLink;
-                dummy.select();
-                document.execCommand("copy");
-                document.body.removeChild(dummy);
-
-                triggerToast("Saved to Cloud! Shared link copied to clipboard.");
-            } catch (error) {
-                console.error("Firestore save error", error);
-                triggerToast("Sync error. Copied local backup.");
-            }
-        }
-
-        async function loadTripFromCloud() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tripId = urlParams.get('tripId');
-            if (!tripId || !db) return;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', tripId);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.lazyOffsetMinutes !== undefined) lazyOffsetMinutes = data.lazyOffsetMinutes;
-                    if (data.energyLevel !== undefined) energyLevel = data.energyLevel;
-                    if (data.loggedExpenses !== undefined) loggedExpenses = data.loggedExpenses;
-                    if (data.checklistItems !== undefined) checklistItems = data.checklistItems;
-                    if (data.ITINERARY_DATA !== undefined) ITINERARY_DATA = data.ITINERARY_DATA;
-                    if (data.customSwapsCount !== undefined) {
-                        customSwapsCount = data.customSwapsCount;
-                        document.getElementById('diag-swaps').textContent = customSwapsCount;
-                    }
-
-                    updateTimeline();
-                    updateStrollerAdvice();
-                    renderExpenses();
-                    renderChecklist();
-                    renderDiscoverTab();
-                    triggerToast("Loaded shared trip from cloud!");
-                }
-            } catch (error) {
-                console.error("Firestore loading failing", error);
-            }
-        }
-    </script>
-
-    <!-- Script Engine -->
-    <script>
         const ORIGINAL_ITINERARY_DATA = {
             "Tue": {
                 name: "Tuesday, June 30",
@@ -543,7 +456,7 @@
                     {
                         id: "tue-slot-2",
                         canSwap: false,
-                        isTrainTransit: true, // Special tag to trigger dynamic train schedule board
+                        isTrainTransit: true,
                         energyTimes: {
                             high: { start: 18.25, end: 20.0 },
                             low: { start: 18.25, end: 20.0 }
@@ -890,7 +803,6 @@
         };
 
         const DISCOVERY_POOL = [
-            // ================== CHICAGO BREAKFAST SPOTS (Tue, Wed, Sat) ==================
             {
                 id: "wildberry-breakfast",
                 title: "Wildberry Pancakes & Cafe",
@@ -930,8 +842,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=Goddess+and+the+Baker+Loop+Chicago+IL",
                 applicableDays: ["Tue", "Wed", "Sat"]
             },
-            
-            // ================== CHICAGO BRUNCH SPOTS (Tue, Wed, Sat) ==================
             {
                 id: "beatrix-loop-brunch",
                 title: "Beatrix Loop Restaurant",
@@ -971,8 +881,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=Cindys+Rooftop+Chicago+IL",
                 applicableDays: ["Tue", "Wed", "Sat"]
             },
-
-            // ================== CHICAGO LUNCH SPOTS (Tue, Wed, Sat) ==================
             {
                 id: "riverwalk-cafe",
                 title: "Riverwalk Cafe",
@@ -999,18 +907,16 @@
                 link: "https://www.google.com/maps/search/?api=1&query=The+Purple+Pig+Chicago+IL",
                 applicableDays: ["Tue", "Wed", "Sat"]
             },
-
-            // ================== CHICAGO DINNER SPOTS (Tue, Wed, Sat) ==================
             {
                 id: "chicago-dinner-cruise",
-                title: "Chicago River architecture Sunset Dinner Cruise",
+                title: "Chicago River Architecture Sunset Dinner Drive",
                 category: "dinner",
                 location: "Riverwalk Docks, Chicago",
                 distance: "0.3 mi (6 min walk from 73 E Lake)",
                 rating: "⭐ 4.8",
                 price: "$$$$",
-                timeText: "Boarding 6:00 PM | Cruise 6:30 PM - 9:00 PM",
-                desc: "An elite 2.5-hour architecture and dining cruise. Features a delicious 3-course plated menu, a climate-controlled glass atrium, and wide, flat outer decks. Highly stroller accessible and incredibly smooth sailing.",
+                timeText: "Boarding 6:00 PM | Drive 6:30 PM - 9:00 PM",
+                desc: "An elite 2.5-hour architecture and dining drive. Features a delicious 3-course plated menu, a climate-controlled glass atrium, and wide, flat outer decks. Highly stroller accessible and incredibly smooth sailing.",
                 link: "https://www.google.com/maps/search/?api=1&query=Chicago+River+Dinner+Cruise+Docks+Chicago+IL",
                 applicableDays: ["Tue", "Wed", "Sat"]
             },
@@ -1105,8 +1011,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=Mercat+a+la+Planxa+Chicago+IL",
                 applicableDays: ["Tue", "Wed", "Sat"]
             },
-
-            // ================== LAKE GENEVA BREAKFAST SPOTS (Thu, Fri) ==================
             {
                 id: "simple-cafe-lg",
                 title: "Simple Cafe",
@@ -1133,8 +1037,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=Jonis+Diner+Lake+Geneva+WI",
                 applicableDays: ["Thu", "Fri"]
             },
-
-            // ================== LAKE GENEVA BRUNCH SPOTS (Thu, Fri) ==================
             {
                 id: "baker-house-lg",
                 title: "Baker House Garden & Mansion",
@@ -1161,8 +1063,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=The+Grandview+Restaurant+Lake+Geneva+WI",
                 applicableDays: ["Thu", "Fri"]
             },
-
-            // ================== LAKE GENEVA LUNCH SPOTS (Thu, Fri) ==================
             {
                 id: "popeyes-lg",
                 title: "Popeye's On Lake Geneva",
@@ -1176,18 +1076,16 @@
                 link: "https://www.google.com/maps/search/?api=1&query=Popeyes+on+Lake+Geneva+Wrigley+Dr+Lake+Geneva+WI",
                 applicableDays: ["Thu", "Fri"]
             },
-
-            // ================== LAKE GENEVA DINNER SPOTS (Thu, Fri) ==================
             {
-                id: "geneva-dinner-cruise",
-                title: "Lake Geneva Cruise Line Sunset Dinner Cruise",
+                id: "geneva-dinner-drive",
+                title: "Lake Geneva Sunset Dinner Drive (Riviera Docks)",
                 category: "dinner",
                 location: "Riviera Docks, Lake Geneva",
                 distance: "0.1 mi (2 min walk from Harbor Shores)",
                 rating: "⭐ 4.7",
                 price: "$$$$",
-                timeText: "Boarding 5:45 PM | Cruise 6:00 PM - 8:30 PM",
-                desc: "Board the grand double-decker boat for a relaxing sunset cruise featuring a full plated dinner service. Perfect for both high energy or gentle baby pace due to calm waters, enclosed dining salons, and beautiful shoreline views.",
+                timeText: "Boarding 5:45 PM | Drive 6:00 PM - 8:30 PM",
+                desc: "Board the grand double-decker boat for a relaxing sunset drive featuring a full plated dinner service. Perfect for both high energy or gentle baby pace due to calm waters, enclosed dining salons, and beautiful shoreline views.",
                 link: "https://www.google.com/maps/search/?api=1&query=Riviera+Docks+Lake+Geneva+WI",
                 applicableDays: ["Thu", "Fri"]
             },
@@ -1230,8 +1128,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=The+Next+Door+Pub+Lake+Geneva+WI",
                 applicableDays: ["Thu", "Fri"]
             },
-
-            // ================== LAKE GENEVA HOTELS SWAPS ==================
             {
                 id: "cove-hotel-lg",
                 title: "The Cove of Lake Geneva",
@@ -1284,8 +1180,6 @@
                 link: "https://www.google.com/maps/search/?api=1&query=The+Abbey+Resort+Fontana+WI",
                 applicableDays: ["Thu", "Fri"]
             },
-
-            // ================== LIVE VERIFIED EVENTS ==================
             {
                 id: "cubs-padres-event",
                 title: "Chicago Cubs vs San Diego Padres",
@@ -1342,11 +1236,11 @@
 
         let ITINERARY_DATA = JSON.parse(JSON.stringify(ORIGINAL_ITINERARY_DATA));
         let selectedDay = "Tue";
-        let energyLevel = "low"; // Default to Gentle Baby Pace as preferred
+        let energyLevel = "low";
         let lazyOffsetMinutes = 0;
         let activeTab = "itinerary";
         let loggedExpenses = [];
-        let discoverActiveMood = "brunch"; // Default categories for gentle baby pace
+        let discoverActiveMood = "brunch";
         let selectedSwapAlternative = null;
         let customSwapsCount = 0;
         
@@ -1361,17 +1255,52 @@
         let isPlayingNoise = false;
         let activeNoiseType = null;
 
-        window.onload = function() {
-            loadPreferences();
-            detectActiveDayAndHour();
-            updateTimeline();
-            updateStrollerAdvice();
-            renderExpenses();
-            renderChecklist();
-            renderDiscoverTab();
-            startClockUpdater();
-        };
+        // Core Live Sync Firebase Realtime Database Engine
+        function savePreferences() {
+            const syncPayload = {
+                selectedDay,
+                energyLevel,
+                lazyOffsetMinutes,
+                loggedExpenses,
+                checklistItems,
+                ITINERARY_DATA,
+                customSwapsCount
+            };
+            set(ref(db, dbPath), syncPayload)
+                .catch(err => console.error("Firebase Sync write failed:", err));
+        }
 
+        // Live Event Synchronization Listener
+        onValue(ref(db, dbPath), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (data.selectedDay !== undefined) selectedDay = data.selectedDay;
+                if (data.energyLevel !== undefined) energyLevel = data.energyLevel;
+                if (data.lazyOffsetMinutes !== undefined) lazyOffsetMinutes = data.lazyOffsetMinutes;
+                if (data.loggedExpenses !== undefined) loggedExpenses = data.loggedExpenses || [];
+                if (data.checklistItems !== undefined) checklistItems = data.checklistItems || [];
+                if (data.ITINERARY_DATA !== undefined) ITINERARY_DATA = data.ITINERARY_DATA;
+                if (data.customSwapsCount !== undefined) {
+                    customSwapsCount = data.customSwapsCount;
+                    const diagSwaps = document.getElementById('diag-swaps');
+                    if (diagSwaps) diagSwaps.textContent = customSwapsCount;
+                }
+
+                // Render dynamic views instantly for all screens
+                updateTimeline();
+                updateStrollerAdvice();
+                renderExpenses();
+                renderChecklist();
+                renderDiscoverTab();
+            } else {
+                // Initialize DB with default states if empty
+                savePreferences();
+            }
+        }, (error) => {
+            console.error("Firebase snapshot reading error:", error);
+        });
+
+        // Diagnostic Drawer Actions
         function openTechModal() {
             document.getElementById('tech-modal').classList.remove('hidden');
         }
@@ -1402,35 +1331,6 @@
                 toast.classList.add('opacity-0', 'scale-90');
                 toast.classList.remove('opacity-100', 'scale-100');
             }, 3000);
-        }
-
-        function savePreferences() {
-            localStorage.setItem('lazyOffset', lazyOffsetMinutes);
-            localStorage.setItem('energyLevel', energyLevel);
-            localStorage.setItem('travelExpenses', JSON.stringify(loggedExpenses));
-            localStorage.setItem('babyChecklistItems', JSON.stringify(checklistItems));
-            localStorage.setItem('customSwappedItinerary', JSON.stringify(ITINERARY_DATA));
-            localStorage.setItem('customSwapsCount', customSwapsCount);
-        }
-
-        function loadPreferences() {
-            const savedOffset = localStorage.getItem('lazyOffset');
-            const savedEnergy = localStorage.getItem('energyLevel');
-            const savedExpenses = localStorage.getItem('travelExpenses');
-            const savedChecklist = localStorage.getItem('babyChecklistItems');
-            const savedItinerary = localStorage.getItem('customSwappedItinerary');
-            const savedSwapsCount = localStorage.getItem('customSwapsCount');
-
-            if (savedOffset !== null) lazyOffsetMinutes = parseInt(savedOffset);
-            if (savedEnergy !== null) energyLevel = savedEnergy;
-            if (savedExpenses !== null) loggedExpenses = JSON.parse(savedExpenses);
-            if (savedChecklist !== null) checklistItems = JSON.parse(savedChecklist);
-            if (savedItinerary !== null) ITINERARY_DATA = JSON.parse(savedItinerary);
-            if (savedSwapsCount !== null) {
-                customSwapsCount = parseInt(savedSwapsCount);
-                const diagSwaps = document.getElementById('diag-swaps');
-                if (diagSwaps) diagSwaps.textContent = customSwapsCount;
-            }
         }
 
         function dismissGuide() {
@@ -1486,9 +1386,7 @@
 
         function setDay(dayCode) {
             selectedDay = dayCode;
-            updateTimeline();
-            updateStrollerAdvice();
-            renderDiscoverTab();
+            savePreferences();
         }
 
         function setEnergy(level) {
@@ -1499,21 +1397,16 @@
                 discoverActiveMood = 'brunch';
             }
             savePreferences();
-            updateTimeline();
-            updateStrollerAdvice();
-            renderDiscoverTab();
         }
 
         function changeOffset(minutes) {
             lazyOffsetMinutes = minutes;
             savePreferences();
-            updateTimeline();
         }
 
         function resetOffset() {
             lazyOffsetMinutes = 0;
             savePreferences();
-            updateTimeline();
         }
 
         function getOffsetHours() {
@@ -1583,32 +1476,20 @@
             container.innerHTML = content;
         }
 
-        /**
-         * Calculates estimated Blue Line departures based on flight landing hour.
-         * Integrates a robust 30-minute baggage retrieval & walking buffer.
-         * Returns an array of formatted strings depicting future departure intervals.
-         */
         function getBlueLineDepartures(flightLandingHourDecimal) {
-            // Include deplaning, baggage claim, and stroller rollout buffer (30 minutes)
             let estimatedStationArrivalHour = flightLandingHourDecimal + 0.5;
-            
             let departures = [];
-            let currentMinutesTotal = estimatedStationArrivalHour * 60; // total absolute minutes from midnight
-            
-            // Round up arrival time to nearest neat 5-minute schedule interval
+            let currentMinutesTotal = estimatedStationArrivalHour * 60;
             let startScheduledMinute = Math.ceil(currentMinutesTotal / 5) * 5;
             
-            // Generate next 4 sequential CTA departures (intervals average 10 minutes)
             for (let i = 0; i < 4; i++) {
                 let scheduledDepartureMinute = startScheduledMinute + (i * 10);
                 let hourValue = Math.floor(scheduledDepartureMinute / 60) % 24;
                 let minuteValue = Math.round(scheduledDepartureMinute % 60);
-                
                 let ampm = hourValue >= 12 ? 'PM' : 'AM';
                 let formattedHour = hourValue % 12;
                 formattedHour = formattedHour ? formattedHour : 12;
                 let formattedMinute = minuteValue < 10 ? '0' + minuteValue : minuteValue;
-                
                 departures.push(`${formattedHour}:${formattedMinute} ${ampm}`);
             }
             return departures;
@@ -1651,7 +1532,7 @@
 
                 if (slot.energyTimes) {
                     if (!slot.energyTimes[energyLevel]) {
-                        return; // Skip drawing breakfast slot during Gentle Baby Pace wakeups
+                        return;
                     }
                     startSetting = slot.energyTimes[energyLevel].start;
                     endSetting = slot.energyTimes[energyLevel].end;
@@ -1696,10 +1577,8 @@
                 const isOverridden = slot.isCustomSwapped === true;
                 const showSwapButton = slot.canSwap === true;
 
-                // Dynamically compile CTA departure schedule if active
                 let departureBoardHtml = '';
                 if (slot.isTrainTransit) {
-                    // Flight lands at 18.25 + offset
                     let flightLandingTime = 18.25 + getOffsetHours();
                     let scheduleList = getBlueLineDepartures(flightLandingTime);
                     departureBoardHtml = `
@@ -1992,7 +1871,6 @@
                 document.getElementById('diag-swaps').textContent = customSwapsCount;
 
                 savePreferences();
-                updateTimeline();
                 closeSwapperModal();
                 switchTab('itinerary');
                 triggerToast("Timeline dynamically updated!");
@@ -2009,7 +1887,6 @@
             if (slotIndex !== -1) {
                 ITINERARY_DATA[dayCode].slots[slotIndex] = JSON.parse(JSON.stringify(originalSlot));
                 savePreferences();
-                updateTimeline();
                 triggerToast("Original itinerary slot restored.");
             }
         }
@@ -2149,13 +2026,11 @@
                 return item;
             });
             savePreferences();
-            renderChecklist();
         }
 
         function deleteChecklistItem(id) {
             checklistItems = checklistItems.filter(item => item.id !== id);
             savePreferences();
-            renderChecklist();
         }
 
         function addCustomChecklistItem() {
@@ -2177,7 +2052,6 @@
             titleInput.value = '';
             descInput.value = '';
             savePreferences();
-            renderChecklist();
         }
 
         function addPresetExpense(name, amount, category) {
@@ -2188,7 +2062,6 @@
                 category: category
             });
             savePreferences();
-            renderExpenses();
         }
 
         function logCustomExpense() {
@@ -2211,19 +2084,16 @@
             nameInput.value = '';
             amountInput.value = '';
             savePreferences();
-            renderExpenses();
         }
 
         function deleteExpense(id) {
             loggedExpenses = loggedExpenses.filter(exp => exp.id !== id);
             savePreferences();
-            renderExpenses();
         }
 
         function clearExpenses() {
             loggedExpenses = [];
             savePreferences();
-            renderExpenses();
         }
 
         function renderExpenses() {
@@ -2265,6 +2135,35 @@
 
             totalDisplay.textContent = `$${total.toFixed(2)}`;
         }
+
+        window.showGuide = showGuide;
+        window.dismissGuide = dismissGuide;
+        window.setDay = setDay;
+        window.setEnergy = setEnergy;
+        window.changeOffset = changeOffset;
+        window.resetOffset = resetOffset;
+        window.setDiscoverMood = setDiscoverMood;
+        window.triggerSwapSelection = triggerSwapSelection;
+        window.closeSwapperModal = closeSwapperModal;
+        window.confirmSwapping = confirmSwapping;
+        window.resetSlotToOriginal = resetSlotToOriginal;
+        window.toggleNoise = toggleNoise;
+        window.toggleChecklistItem = toggleChecklistItem;
+        window.deleteChecklistItem = deleteChecklistItem;
+        window.addCustomChecklistItem = addCustomChecklistItem;
+        window.addPresetExpense = addPresetExpense;
+        window.logCustomExpense = logCustomExpense;
+        window.deleteExpense = deleteExpense;
+        window.clearExpenses = clearExpenses;
+        window.openTechModal = openTechModal;
+        window.closeTechModal = closeTechModal;
+        window.copyStartupPitch = copyStartupPitch;
+        window.switchTab = switchTab;
+        window.openSwapDirectly = openSwapDirectly;
+
+        // Start Clock cycle updates
+        detectActiveDayAndHour();
+        startClockUpdater();
     </script>
 </body>
 </html>
