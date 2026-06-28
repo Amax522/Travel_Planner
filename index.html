@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicago & Lake Geneva Dynamic Companion - CleverOps</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Icons&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar hiding and styles */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Sound wave breathing animation for baby kit */
+        @keyframes wave-breath {
+            0%, 100% { transform: scaleY(0.3); }
+            50% { transform: scaleY(1.2); }
+        }
+        .wave-bar {
+            animation: wave-breath 1.2s ease-in-out infinite;
+        }
+        .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.6s; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 selection:bg-amber-500/30 selection:text-amber-200">
+
+    <!-- App Shell Container -->
+    <div class="max-w-md mx-auto min-h-screen bg-slate-950 flex flex-col shadow-2xl relative pb-20">
+        
+        <!-- Header Section -->
+        <header class="bg-gradient-to-b from-indigo-950 to-slate-950 px-5 pt-6 pb-4 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-amber-500 flex items-center gap-1">
+                        <span class="material-icons text-[10px] animate-pulse">explore</span> Live Trip Companion
+                    </span>
+                    <h1 class="text-xl font-bold tracking-tight text-white mt-1">Chicago Trip Tracker</h1>
+                </div>
+                <!-- Interactive Actions -->
+                <div class="flex items-center gap-2">
+                    <button onclick="showGuide()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-amber-400 rounded-full p-2 active:scale-95 transition-all flex items-center justify-center shadow-lg" title="App Instructions">
+                        <span class="material-icons text-sm">help_outline</span>
+                    </button>
+                    <div id="live-time-badge" class="bg-indigo-900/40 border border-indigo-500/30 px-3 py-1.5 rounded-full text-center">
+                        <span id="current-clock" class="text-xs font-mono font-bold text-indigo-300">--:-- --</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flexible Schedule Offset Controls -->
+            <div id="time-shifter-panel" class="mt-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                        <span class="material-icons text-xs text-amber-500">schedule</span> Flexible Schedule Offset:
+                    </span>
+                    <span id="offset-display" class="text-xs font-bold text-amber-400 bg-amber-950/40 border border-amber-900/50 px-2.5 py-0.5 rounded-full">On Time</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeOffset(-60)" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg text-[11px] font-bold text-slate-300 transition-all">-1 Hr</button>
+                    <button onclick="resetOffset()" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg text-[11px] font-bold text-slate-300 transition-all">On Time</button>
+                    <button onclick="changeOffset(60)" class="flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 active:scale-95 rounded-lg text-[11px] font-bold text-amber-300 transition-all">+1 Hr</button>
+                    <button onclick="changeOffset(120)" class="flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 active:scale-95 rounded-lg text-[11px] font-bold text-amber-300 transition-all">+2 Hr</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tab Page: ITINERARY -->
+        <div id="tab-content-itinerary" class="tab-view space-y-4">
+            
+            <!-- Onboarding User Guide Modal Overlay -->
+            <div id="quick-guide-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+                <div class="bg-slate-900 border border-indigo-500/20 rounded-3xl p-5 max-w-sm w-full relative space-y-3 shadow-2xl">
+                    <button onclick="dismissGuide()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300 transition-all">
+                        <span class="material-icons text-sm">close</span>
+                    </button>
+                    <div class="flex items-start gap-3">
+                        <span class="material-icons text-indigo-400 mt-0.5 animate-bounce">help_outline</span>
+                        <div class="space-y-2 text-left">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-1.5">How to Navigate & Get Benefits</h3>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                <strong>Dynamic Food Swapping:</strong> Adjusting to your child's rhythm? Toggle <strong class="text-teal-400">Gentle Baby Pace</strong> below. We sleep in, skip early breakfasts, start at 11:00 AM with <strong>Brunch</strong>, and transition directly to <strong>Dinner</strong>. 
+                            </p>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                <strong>High Energy Mode:</strong> Toggle <strong class="text-red-400">High Energy</strong> to start early at 9:00 AM with separate <strong>Breakfast</strong>, <strong>Lunch</strong>, and <strong>Dinner</strong> categories!
+                            </p>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                <strong>Switch Spot:</strong> Tap the <strong class="text-indigo-400">Switch Spot</strong> button on any eligible food or lodging event to swap it dynamically with other top choices on the fly.
+                            </p>
+                            <div class="pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 leading-normal flex justify-between items-center">
+                                <span>Developed by <strong>CleverOps</strong></span>
+                                <span class="bg-indigo-500/10 text-indigo-300 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wide">AI Solutions</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trip Day Quick Navigation Tabs -->
+            <div class="px-4 pt-2">
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="setDay('Tue')" id="day-tab-Tue" class="day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300">
+                        Tue <span class="block text-[10px] opacity-70">Jun 30</span>
+                    </button>
+                    <button onclick="setDay('Wed')" id="day-tab-Wed" class="day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300">
+                        Wed <span class="block text-[10px] opacity-70">Jul 1</span>
+                    </button>
+                    <button onclick="setDay('Thu')" id="day-tab-Thu" class="day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300">
+                        Thu <span class="block text-[10px] opacity-70">Jul 2</span>
+                    </button>
+                    <button onclick="setDay('Fri')" id="day-tab-Fri" class="day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300">
+                        Fri <span class="block text-[10px] opacity-70">Jul 3</span>
+                    </button>
+                    <button onclick="setDay('Sat')" id="day-tab-Sat" class="day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300">
+                        Sat <span class="block text-[10px] opacity-70">Jul 4</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Energy Level Toggle Grid -->
+            <div class="px-4">
+                <div class="bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800/80 flex">
+                    <button onclick="setEnergy('high')" id="energy-tab-high" class="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-slate-400">
+                        <span class="material-icons text-sm text-red-400">local_fire_department</span> High Energy
+                    </button>
+                    <button onclick="setEnergy('low')" id="energy-tab-low" class="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-slate-400">
+                        <span class="material-icons text-sm text-teal-400">child_care</span> Gentle Baby Pace
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Flight Spotlight (Shown during transit windows) -->
+            <div id="flight-spotlight" class="mx-4 hidden bg-gradient-to-r from-sky-950 to-indigo-950 border border-sky-500/30 p-4 rounded-2xl">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="bg-sky-500/20 text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Transit Active</span>
+                        <h3 id="flight-title" class="text-sm font-bold text-white mt-1">Flight Information</h3>
+                    </div>
+                    <span class="material-icons text-sky-400 animate-bounce font-bold">flight_takeoff</span>
+                </div>
+                <p id="flight-details" class="text-xs text-sky-200/80 mt-2 leading-relaxed"></p>
+            </div>
+
+            <!-- Timeline Content Area -->
+            <main class="px-4 mt-2 space-y-6">
+                <div id="timeline-container" class="relative border-l-2 border-slate-800 ml-3.5 pl-6 space-y-6">
+                    <!-- Dynamic timeline elements will be dynamically injected here -->
+                </div>
+            </main>
+        </div>
+
+        <!-- Tab Page: DISCOVER & MOOD SWAPPING -->
+        <div id="tab-content-discover" class="tab-view hidden p-5 space-y-4">
+            <div class="bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-3xl p-5">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <span class="material-icons text-amber-400 animate-pulse">auto_awesome</span> Discovery & Mood Hub
+                </h3>
+                <p class="text-[11px] text-indigo-300 mt-1">
+                    Explore verified spots with exact distances, pricing, and ratings. Swap any slot directly below!
+                </p>
+                <div class="mt-2 text-[10px] text-slate-400">
+                    Currently calculated from base: <strong id="location-anchor-text" class="text-slate-200">73 E Lake St, Chicago</strong>
+                </div>
+            </div>
+
+            <!-- Mood filter selector - Dynamically organized into user-requested categories -->
+            <div class="grid grid-cols-5 gap-1 bg-slate-900/60 p-1.5 rounded-2xl border border-slate-800" id="discover-category-filters">
+                <button onclick="setDiscoverMood('breakfast')" id="mood-btn-breakfast" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400">🥞 Breakfast</button>
+                <button onclick="setDiscoverMood('brunch')" id="mood-btn-brunch" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400">🍳 Brunch</button>
+                <button onclick="setDiscoverMood('lunch')" id="mood-btn-lunch" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400">🍔 Lunch</button>
+                <button onclick="setDiscoverMood('dinner')" id="mood-btn-dinner" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400">🥩 Dinner</button>
+                <button onclick="setDiscoverMood('hotel')" id="mood-btn-hotel" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400 hidden">🏨 Hotels</button>
+                <button onclick="setDiscoverMood('events')" id="mood-btn-events" class="py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400">🎉 Events</button>
+            </div>
+
+            <!-- Dynamic Alternative Options List -->
+            <div class="space-y-3" id="discover-options-container">
+                <!-- Swappable options injected here dynamically -->
+            </div>
+        </div>
+
+        <!-- Tab Page: BABY KIT -->
+        <div id="tab-content-babykit" class="tab-view hidden p-5 space-y-5">
+            <!-- Baby White Noise Synth Generator Card -->
+            <div class="bg-gradient-to-br from-indigo-950/50 to-slate-900 border border-indigo-500/20 rounded-3xl p-5">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-base text-white">Stroller White Noise Hub</h3>
+                        <p class="text-[11px] text-indigo-300">Generates soothing synthesizers offline to help baby nap</p>
+                    </div>
+                    <!-- Audio state visual equalizer bars -->
+                    <div id="audio-wave-bars" class="flex items-end gap-1 h-6 opacity-0 transition-opacity duration-300">
+                        <div class="wave-bar w-1 h-3 bg-indigo-400 rounded-full"></div>
+                        <div class="wave-bar w-1 h-5 bg-indigo-400 rounded-full"></div>
+                        <div class="wave-bar w-1 h-4 bg-indigo-400 rounded-full"></div>
+                        <div class="wave-bar w-1 h-6 bg-indigo-400 rounded-full"></div>
+                        <div class="wave-bar w-1 h-2 bg-indigo-400 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Web Audio Controls -->
+                <div class="grid grid-cols-2 gap-3 mt-5">
+                    <button id="btn-sound-white" onclick="toggleNoise('white')" class="flex flex-col items-center justify-center p-3.5 bg-slate-900 hover:bg-slate-800/80 border border-slate-800 rounded-2xl transition-all">
+                        <span class="material-icons text-indigo-400 text-2xl">waves</span>
+                        <span class="text-xs font-bold text-slate-200 mt-2">Static White</span>
+                        <span class="text-[9px] text-slate-400 mt-0.5">Gentle constant roar</span>
+                    </button>
+                    <button id="btn-sound-ocean" onclick="toggleNoise('ocean')" class="flex flex-col items-center justify-center p-3.5 bg-slate-900 hover:bg-slate-800/80 border border-slate-800 rounded-2xl transition-all">
+                        <span class="material-icons text-teal-400 text-2xl">tsunami</span>
+                        <span class="text-xs font-bold text-slate-200 mt-2">Deep Ocean</span>
+                        <span class="text-[9px] text-slate-400 mt-0.5">Rolling brown noise</span>
+                    </button>
+                </div>
+                <div id="synth-status" class="text-center text-[10px] text-slate-400 mt-3">Synthesizer is currently sleeping</div>
+            </div>
+
+            <!-- Stroller Weather & Comfort Assistant -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 space-y-3.5">
+                <div class="flex items-center gap-2">
+                    <span class="material-icons text-amber-500 text-lg">thermostat</span>
+                    <h3 class="font-bold text-sm text-slate-200">Stroller Outfit & Gear Guide</h3>
+                </div>
+                <!-- Dynamic text content updated based on Day and Energy levels -->
+                <div id="stroller-advice-card" class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <!-- Loaded dynamically via js -->
+                </div>
+            </div>
+
+            <!-- Baby Survival Dynamic Checklist Box -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 space-y-4">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 class="font-bold text-sm text-slate-200 flex items-center gap-1.5">
+                        <span class="material-icons text-indigo-400">verified_user</span> Baby Survival Kit Checklist
+                    </h3>
+                    <span id="kit-progress" class="text-[10px] font-bold text-indigo-400 bg-indigo-950/60 px-2 py-0.5 border border-indigo-900 rounded-full">0 of 2 Done</span>
+                </div>
+
+                <!-- Dynamic Item Container -->
+                <div id="checklist-container" class="space-y-3">
+                    <!-- Dynamically rendered checklist items -->
+                </div>
+
+                <!-- Add Custom Checklist Item Creator -->
+                <div class="pt-4 border-t border-slate-800/60 space-y-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Add Custom Item</span>
+                    <div class="flex gap-2">
+                        <input type="text" id="checklist-title-input" placeholder="Item Name..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder-slate-600">
+                        <button onclick="addCustomChecklistItem()" class="px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl text-white font-bold text-xs flex items-center justify-center transition-all">
+                            <span class="material-icons text-sm">add</span>
+                        </button>
+                    </div>
+                    <input type="text" id="checklist-desc-input" placeholder="Subtext / Details (optional)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-400 focus:outline-none focus:border-indigo-500 placeholder-slate-600">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Page: LEDGER -->
+        <div id="tab-content-ledger" class="tab-view hidden p-5 space-y-4">
+            <div class="bg-gradient-to-br from-teal-950/30 to-slate-900 border border-teal-500/20 rounded-3xl p-5">
+                <span class="text-[10px] font-mono tracking-widest text-teal-400 uppercase block mb-1">Lazy Budget Tracker</span>
+                <div class="flex justify-between items-baseline">
+                    <h3 class="text-3xl font-extrabold tracking-tight text-white" id="ledger-total">$0.00</h3>
+                    <span class="text-xs text-slate-400">Total Spent</span>
+                </div>
+            </div>
+
+            <!-- Add Expense Quick Buttons -->
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="addPresetExpense('Upscale Dining', 180, 'food')" class="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 transition-all text-left">
+                    <span class="text-xs font-bold text-slate-200 block">🥩 Dinner Preset</span>
+                    <span class="text-[10px] text-slate-500 block mt-0.5">Est. $180.00 / Food</span>
+                </button>
+                <button onclick="addPresetExpense('Car Rental', 110, 'ride')" class="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 transition-all text-left">
+                    <span class="text-xs font-bold text-slate-200 block">🚗 Car Preset</span>
+                    <span class="text-[10px] text-slate-500 block mt-0.5">Est. $110.00 / Ride</span>
+                </button>
+            </div>
+
+            <!-- Custom Expense Entry -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-4.5 space-y-3">
+                <div class="flex gap-2">
+                    <input type="text" id="expense-name" placeholder="Fudge, coffee, parking..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <input type="number" id="expense-amount" placeholder="$0" class="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 text-right focus:outline-none focus:border-indigo-500">
+                    <button onclick="logCustomExpense()" class="p-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl text-white font-bold text-xs flex items-center justify-center">
+                        <span class="material-icons text-sm">add</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Expense List Display -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 space-y-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-xs font-bold text-slate-300">Logged Transactions</h4>
+                    <button onclick="clearExpenses()" class="text-[10px] font-bold text-red-400 hover:underline">Clear All</button>
+                </div>
+                <div id="expense-list-container" class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                    <div class="text-center text-xs text-slate-500 py-4">No logged expenses yet. Enjoy your trip!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Persistent Branding Pill -->
+        <div class="fixed bottom-18 left-0 right-0 max-w-md mx-auto px-4 pointer-events-none z-40">
+            <button onclick="openTechModal()" class="w-full pointer-events-auto bg-gradient-to-r from-indigo-950/95 via-indigo-900/95 to-slate-950/95 border border-indigo-500/30 rounded-xl px-4 py-2 flex items-center justify-between shadow-lg shadow-indigo-950/40 backdrop-blur-md active:scale-95 transition-all">
+                <span class="text-[10px] font-bold tracking-widest text-slate-300 uppercase flex items-center gap-1.5">
+                    <span class="material-icons text-[11px] text-emerald-400 animate-pulse">settings_suggest</span> Powered by CleverOps
+                </span>
+                <span class="text-[9px] font-bold text-indigo-400 uppercase flex items-center gap-1">
+                    System Hub <span class="material-icons text-[10px]">open_in_new</span>
+                </span>
+            </button>
+        </div>
+
+        <!-- Persistent Bottom Navigation Tabs -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 border-t border-slate-800/80 flex justify-around items-center h-16 z-50 backdrop-blur-md">
+            <button onclick="switchTab('itinerary')" id="tab-btn-itinerary" class="flex flex-col items-center justify-center w-16 h-full transition-all text-amber-500">
+                <span class="material-icons text-lg">route</span>
+                <span class="text-[8px] font-bold mt-0.5">Itinerary</span>
+            </button>
+            <button onclick="switchTab('discover')" id="tab-btn-discover" class="flex flex-col items-center justify-center w-16 h-full transition-all text-slate-500 hover:text-slate-300">
+                <span class="material-icons text-lg">auto_awesome</span>
+                <span class="text-[8px] font-bold mt-0.5">Discover</span>
+            </button>
+            <button onclick="switchTab('babykit')" id="tab-btn-babykit" class="flex flex-col items-center justify-center w-16 h-full transition-all text-slate-500 hover:text-slate-300">
+                <span class="material-icons text-lg">child_care</span>
+                <span class="text-[8px] font-bold mt-0.5">Baby Kit</span>
+            </button>
+            <button onclick="switchTab('ledger')" id="tab-btn-ledger" class="flex flex-col items-center justify-center w-16 h-full transition-all text-slate-500 hover:text-slate-300">
+                <span class="material-icons text-lg">payments</span>
+                <span class="text-[8px] font-bold mt-0.5">Ledger</span>
+            </button>
+        </nav>
+
+        <!-- Technical Diagnostics Modal -->
+        <div id="tech-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end justify-center hidden">
+            <div class="w-full max-w-md bg-slate-900 border-t border-indigo-500/20 rounded-t-3xl p-6 space-y-4 shadow-2xl relative">
+                <button onclick="closeTechModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-all">
+                    <span class="material-icons">close</span>
+                </button>
+
+                <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+                    <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-2 flex items-center justify-center text-indigo-400">
+                        <span class="material-icons text-2xl">insights</span>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-white uppercase tracking-wider">CleverOps</h2>
+                        <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">AI Custom Solutions Startup</p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    CleverOps is an elite custom solutions boutique founded by <strong>Ahad</strong>. We build blazing-fast modern software configurations to automate high-friction operational constraints.
+                </p>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block">Active App Diagnostics:</span>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                        <div class="text-slate-400">Audio Synth State: <span id="diag-synth" class="text-indigo-400 font-bold">SLEEPING</span></div>
+                        <div class="text-slate-400">Swaps Logged: <span id="diag-swaps" class="text-amber-400 font-bold">0</span></div>
+                        <div class="text-slate-400">Cloud Host: <span id="diag-cloud" class="text-emerald-400 font-bold">LOCAL</span></div>
+                        <div class="text-slate-400">Core Engine: <span class="text-emerald-400">Active</span></div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <button onclick="copyStartupPitch()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5">
+                        <span class="material-icons text-sm">assignment_turned_in</span> Copy CleverOps Briefing
+                    </button>
+                    <p class="text-center text-[9px] text-slate-500">Tap to instantly copy our startup elevator pitch & contact parameters.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Haptic Feedback Toast Box -->
+        <div id="custom-toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg shadow-emerald-950/50 backdrop-blur-sm pointer-events-none transition-all duration-300 transform scale-90 opacity-0 z-50 flex items-center gap-1.5">
+            <span class="material-icons text-sm text-emerald-400">check_circle</span>
+            <span id="toast-message">Custom options updated!</span>
+        </div>
+
+        <!-- Dynamic Swapper Action Sheet (Modal Overlay) -->
+        <div id="swapper-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end justify-center hidden">
+            <div class="w-full max-w-md bg-slate-900 border-t border-indigo-500/30 rounded-t-3xl p-6 space-y-4 shadow-2xl relative">
+                <button onclick="closeSwapperModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-all">
+                    <span class="material-icons">close</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="material-icons text-amber-500">swap_horiz</span>
+                    <h3 class="font-bold text-base text-white">Switch Spot</h3>
+                </div>
+                <p class="text-xs text-slate-400">Choose which activity slot on your <strong class="text-slate-200" id="swapper-target-day">...</strong> schedule to replace with <strong class="text-amber-400" id="swapper-target-name">...</strong>:</p>
+                
+                <div class="space-y-2 mt-2 max-h-60 overflow-y-auto no-scrollbar" id="swapper-slots-list">
+                    <!-- Populated dynamically based on day and category compatibilities -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDK Modules Integration for Sharing/Persistence -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global instances
+        let app, db, auth;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'chicago-trip-tracker';
+        
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // Sign in anonymously first to authenticate
+                signInAnonymously(auth).then(() => {
+                    const syncStatus = document.getElementById('sync-status');
+                    if (syncStatus) syncStatus.textContent = "CLOUD ENGINE ACTIVE";
+                    
+                    const diagCloud = document.getElementById('diag-cloud');
+                    if (diagCloud) diagCloud.textContent = "FIRESTORE CLOUD";
+                    // Try loading existing trip parameters from URL query params
+                    loadTripFromCloud();
+                }).catch(err => {
+                    console.error("Firebase auth failing", err);
+                });
+            }
+        } catch (e) {
+            console.warn("Firebase not configured, fallback to standard offline modes", e);
+        }
+
+        // Expose functions globally for the button triggers
+        window.saveTripToCloud = async function() {
+            if (!db || !auth || !auth.currentUser) {
+                triggerToast("Firestore config is not found in local sandbox. Saved locally!");
+                return;
+            }
+            
+            const tripId = crypto.randomUUID();
+            const payload = {
+                lazyOffsetMinutes,
+                energyLevel,
+                loggedExpenses,
+                checklistItems,
+                ITINERARY_DATA,
+                customSwapsCount,
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', tripId);
+                await setDoc(docRef, payload);
+                
+                // Copy shareable link to clipboard
+                const shareableLink = `${window.location.origin}${window.location.pathname}?tripId=${tripId}`;
+                const dummy = document.createElement("textarea");
+                document.body.appendChild(dummy);
+                dummy.value = shareableLink;
+                dummy.select();
+                document.execCommand("copy");
+                document.body.removeChild(dummy);
+
+                triggerToast("Saved to Cloud! Shared link copied to clipboard.");
+            } catch (error) {
+                console.error("Firestore save error", error);
+                triggerToast("Sync error. Copied local backup.");
+            }
+        }
+
+        async function loadTripFromCloud() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tripId = urlParams.get('tripId');
+            if (!tripId || !db) return;
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', tripId);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.lazyOffsetMinutes !== undefined) lazyOffsetMinutes = data.lazyOffsetMinutes;
+                    if (data.energyLevel !== undefined) energyLevel = data.energyLevel;
+                    if (data.loggedExpenses !== undefined) loggedExpenses = data.loggedExpenses;
+                    if (data.checklistItems !== undefined) checklistItems = data.checklistItems;
+                    if (data.ITINERARY_DATA !== undefined) ITINERARY_DATA = data.ITINERARY_DATA;
+                    if (data.customSwapsCount !== undefined) {
+                        customSwapsCount = data.customSwapsCount;
+                        document.getElementById('diag-swaps').textContent = customSwapsCount;
+                    }
+
+                    updateTimeline();
+                    updateStrollerAdvice();
+                    renderExpenses();
+                    renderChecklist();
+                    renderDiscoverTab();
+                    triggerToast("Loaded shared trip from cloud!");
+                }
+            } catch (error) {
+                console.error("Firestore loading failing", error);
+            }
+        }
+    </script>
+
+    <!-- Script Engine -->
+    <script>
+        const ORIGINAL_ITINERARY_DATA = {
+            "Tue": {
+                name: "Tuesday, June 30",
+                slots: [
+                    {
+                        id: "tue-slot-1",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 15.5, end: 18.25 },
+                            low: { start: 15.5, end: 18.25 }
+                        },
+                        title: "Airplane Window (AUS ➔ ORD)",
+                        desc: "United Airlines Flight departs Austin at 3:37 PM, landing in O'Hare at 6:15 PM. Keep baby comfortable on board.",
+                        isFlight: true,
+                        highEnergy: {
+                            act: "AUS Departure Setup",
+                            details: "Prepare baby toys, standard tablets, and soothing pacifiers for takeoff."
+                        },
+                        lowEnergy: {
+                            act: "Calm Flight window",
+                            details: "Snuggle up and prepare for a long, quiet rest period on board."
+                        }
+                    },
+                    {
+                        id: "tue-slot-2",
+                        canSwap: false,
+                        isTrainTransit: true, // Special tag to trigger dynamic train schedule board
+                        energyTimes: {
+                            high: { start: 18.25, end: 20.0 },
+                            low: { start: 18.25, end: 20.0 }
+                        },
+                        title: "CTA Blue Line transit to 73 E Lake St",
+                        desc: "Board the CTA Blue Line inside O'Hare terminal. Enjoy a direct, traffic-free ride with the stroller.",
+                        highEnergy: {
+                            act: "Blue Line Elevator Stroll",
+                            details: "Ride directly to Clark/Lake station. Take the elevator straight up to the street, and walk 3 flat blocks East to 73 E Lake St.",
+                            link: "https://www.google.com/maps/dir/O'Hare+Transit+Center,+Chicago,+IL/73+E+Lake+St,+Chicago,+IL+60601"
+                        },
+                        lowEnergy: {
+                            act: "Leisurely Train & Walk",
+                            details: "Take the train slowly. Exit via elevators at Clark/Lake and enjoy a gentle 5-minute stroll to the front door."
+                        }
+                    },
+                    {
+                        id: "tue-slot-3",
+                        canSwap: true,
+                        swapCategory: "dinner",
+                        energyTimes: {
+                            high: { start: 20.0, end: 23.5 },
+                            low: { start: 20.0, end: 23.5 }
+                        },
+                        title: "Upscale Lower Loop Dining",
+                        desc: "Settle into the apartment and find some premium Chicago food to celebrate your first night.",
+                        highEnergy: {
+                            act: "Dinner: The Dearborn",
+                            details: "Walk just 1.5 blocks to this highly-rated upscale bistro. Exceptionally lively, fully open, stroller accessible, and famous for its Midwestern tavern pizza and fish & chips.",
+                            link: "https://www.google.com/maps/search/?api=1&query=The+Dearborn+Chicago+IL"
+                        },
+                        lowEnergy: {
+                            act: "Cozy Gage Bistro",
+                            details: "Walk 2 blocks to The Gage Gastropub for a relaxed upscale meal overlooking the park.",
+                            link: "https://www.google.com/maps/search/?api=1&query=The+Gage+Chicago+IL"
+                        }
+                    }
+                ]
+            },
+            "Wed": {
+                name: "Wednesday, July 1",
+                slots: [
+                    {
+                        id: "wed-slot-1",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 7.5, end: 9.0 } 
+                        },
+                        title: "Wake up & Energize Prep",
+                        desc: "Clean bottles and pack a complete stroller diaper bag for a full day out in the busy city.",
+                        highEnergy: {
+                            act: "Fast Sunrise Prep",
+                            details: "Waking up early to maximize the Chicago Loop morning fresh air."
+                        }
+                    },
+                    {
+                        id: "wed-slot-2",
+                        canSwap: true,
+                        swapCategory: "breakfast-brunch",
+                        energyTimes: {
+                            high: { start: 9.0, end: 11.0 },   
+                            low: { start: 11.0, end: 13.5 }   
+                        },
+                        title: "Morning Meal Session",
+                        desc: "Savor a wonderful first meal of the day right near Millennium Park.",
+                        highEnergy: {
+                            act: "Breakfast: Wildberry Pancakes & Cafe",
+                            details: "Walk 1.5 blocks to Wildberry. Fuel up with an incredible signature breakfast at 9:00 AM.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Wildberry+Acai+Cafe+Chicago+IL"
+                        },
+                        lowEnergy: {
+                            act: "Brunch: Beatrix Loop",
+                            details: "Waking up comfortably at baby's natural pace. Stroller-friendly morning brunch featuring honey lattes and fresh scrambles starting at 11:00 AM.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Beatrix+Loop+Chicago+IL"
+                        }
+                    },
+                    {
+                        id: "wed-slot-3",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 11.0, end: 13.0 },
+                            low: { start: 13.5, end: 16.5 }
+                        },
+                        title: "Afternoon Loop & Riverwalk Exploration",
+                        desc: "Enjoy Chicago's scenic, wide, flat walking paths right next to the river.",
+                        highEnergy: {
+                            act: "Riverwalk Exploration & Gelato",
+                            details: "Walk the lively riverwalk. Enjoy the boats passing by and grab some refreshing artisanal gelato on the way.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Chicago+Riverwalk+Chicago+IL"
+                        },
+                        lowEnergy: {
+                            act: "Grant Park Shaded Lounge",
+                            details: "Find a massive shade tree near the lakeside path. Lay out a blanket and let baby crawl on the cool grass.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Grant+Park+Chicago+IL"
+                        }
+                    },
+                    {
+                        id: "wed-slot-4",
+                        canSwap: true,
+                        swapCategory: "lunch",
+                        energyTimes: {
+                            high: { start: 13.0, end: 15.5 } 
+                        },
+                        title: "Midday Power Lunch Window",
+                        desc: "Explore high-energy loop locations for a quick bite.",
+                        highEnergy: {
+                            act: "Goddess & The Baker Wabash",
+                            details: "Snag premium panini, flatbreads, and specialty cold brew lattes on a fast walk.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Goddess+and+the+Baker+Loop+Chicago+IL"
+                        }
+                    },
+                    {
+                        id: "wed-slot-5",
+                        canSwap: true,
+                        swapCategory: "dinner",
+                        energyTimes: {
+                            high: { start: 18.0, end: 21.0 },
+                            low: { start: 17.5, end: 20.5 }
+                        },
+                        title: "Vibrant Fine Dining Selection",
+                        desc: "Spend your final Chicago night enjoying the city's world-famous culinary scene.",
+                        highEnergy: {
+                            act: "Vibrant Dinner: Siena Tavern",
+                            details: "Head to Fabio Viviani's Siena Tavern in River North. Highly acclaimed modern Italian, spacious, fully open and operating.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Siena+Tavern+Chicago+IL"
+                        },
+                        lowEnergy: {
+                            act: "Siena Tavern Dinner",
+                            details: "Enjoy a relaxed dining experience with plenty of space directly overlooking Kinzie St.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Siena+Tavern+Chicago+IL"
+                        }
+                    }
+                ]
+            },
+            "Thu": {
+                name: "Thursday, July 2",
+                slots: [
+                    {
+                        id: "thu-slot-1",
+                        canSwap: true,
+                        swapCategory: "breakfast-brunch",
+                        energyTimes: {
+                            high: { start: 9.0, end: 11.5 },   
+                            low: { start: 11.0, end: 13.0 }   
+                        },
+                        title: "Wakeup & Departure Fuel",
+                        desc: "Prepare for your road trip northwest with a delicious morning meal.",
+                        highEnergy: {
+                            act: "Breakfast: Wildberry Pancakes",
+                            details: "Fuel up with an energetic breakfast at 9:00 AM before grabbing the car from Dearborn counters.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Wildberry+Acai+Cafe+Chicago+IL"
+                        },
+                        lowEnergy: {
+                            act: "Brunch: Beatrix Loop",
+                            details: "Waking up rested. Meet up at 11:00 AM for soft scrambles and cold brew in the Loop.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Beatrix+Loop+Chicago+IL"
+                        }
+                    },
+                    {
+                        id: "thu-slot-2",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 11.5, end: 13.5 },
+                            low: { start: 13.0, end: 15.0 }
+                        },
+                        title: "The 90-Minute Drive to Lake Geneva",
+                        desc: "Grab your rental car and head northwest. Minimal driving time keeps baby perfectly calm.",
+                        highEnergy: {
+                            act: "Music & Highway Drive",
+                            details: "Blast your favorite road trip playlist and enjoy a scenic drive."
+                        },
+                        lowEnergy: {
+                            act: "Quiet Car Nap Window",
+                            details: "Let baby drift to sleep in the back seat under the cooling AC."
+                        }
+                    },
+                    {
+                        id: "thu-slot-3",
+                        canSwap: true,
+                        swapCategory: "hotel",
+                        energyTimes: {
+                            high: { start: 13.5, end: 17.0 },
+                            low: { start: 15.0, end: 18.0 }
+                        },
+                        title: "Unpack & Downtown Exploration",
+                        desc: "Check into your hotel and get your bearings entirely on foot.",
+                        highEnergy: {
+                            act: "Staying at: The Cove of Lake Geneva",
+                            details: "Head straight out the hotel door. Grab a lakeside lunch on the spacious deck at Popeye's Rotisserie.",
+                            link: "https://www.google.com/maps/search/?api=1&query=The+Cove+of+Lake+Geneva+111+Center+St+Lake+Geneva+WI+53147"
+                        },
+                        lowEnergy: {
+                            act: "Staying at: Harbor Shores on Lake Geneva",
+                            details: "Walk to Riviera Pier. Hop onto a 1-hour narrated historic lake tour on a stable, flat boat.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Harbor+Shores+on+Lake+Geneva+300+Wrigley+Dr+Lake+Geneva+WI"
+                        }
+                    },
+                    {
+                        id: "thu-slot-4",
+                        canSwap: true,
+                        swapCategory: "dinner",
+                        energyTimes: {
+                            high: { start: 17.0, end: 20.5 },
+                            low: { start: 18.0, end: 21.0 }
+                        },
+                        title: "Lakefront Celebration Hours",
+                        desc: "Enjoy the bustling town vibes next to the water.",
+                        highEnergy: {
+                            act: "Thursday Concert in Flat Iron Park",
+                            details: "Check out Concerts in Flat Iron Park. Grab some takeout, spread a blanket on the grass, and enjoy.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Flat+Iron+Park+201+Wrigley+Dr+Lake+Geneva+WI+53147"
+                        },
+                        lowEnergy: {
+                            act: "Quiet Dinner Off-Strip",
+                            details: "Enjoy a relaxed dining experience with plenty of space at Next Door Pub.",
+                            link: "https://www.google.com/maps/search/?api=1&query=The+Next+Door+Pub+Lake+Geneva+WI"
+                        }
+                    }
+                ]
+            },
+            "Fri": {
+                name: "Friday, July 3",
+                slots: [
+                    {
+                        id: "fri-slot-1",
+                        canSwap: true,
+                        swapCategory: "breakfast-brunch",
+                        energyTimes: {
+                            high: { start: 9.0, end: 11.5 },   
+                            low: { start: 11.0, end: 13.5 }   
+                        },
+                        title: "Wisconsin Lakeview Dining",
+                        desc: "Experience local culinary highlights right next to the water.",
+                        highEnergy: {
+                            act: "Lakeside Breakfast: Simple Cafe",
+                            details: "Savor local farm-to-table breakfast scramble at Simple Cafe starting at 9:00 AM, then stroll along the Riviera Beach boardwalk.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Simple+Cafe+Lake+Geneva+WI"
+                        },
+                        lowEnergy: {
+                            act: "Vintage Brunch: Baker House Garden",
+                            details: "Arrive at 11:00 AM for an elite garden brunch overlooking the lake, followed by a quiet shaded stroll on the Shore Path.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Baker+House+Lake+Geneva+WI"
+                        }
+                    },
+                    {
+                        id: "fri-slot-2",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 11.5, end: 14.0 },
+                            low: { start: 13.5, end: 16.5 }
+                        },
+                        title: "Beat the Midday Sun",
+                        desc: "Find cooling air-conditioned options during the peak heat.",
+                        highEnergy: {
+                            act: "Main Street Boutique Walk",
+                            details: "Explore the air-conditioned boutique shops and cafes on Main Street."
+                        },
+                        lowEnergy: {
+                            act: "Scenic Car Drive Loop + Library",
+                            details: "Enjoy a cooling drive around the lake, then relax inside the scenic public library on the water.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Lake+Geneva+Public+Library+918+Main+St+Lake+Geneva+WI+53147"
+                        }
+                    },
+                    {
+                        id: "fri-slot-3",
+                        canSwap: true,
+                        swapCategory: "dinner",
+                        energyTimes: {
+                            high: { start: 15.0, end: 19.5 },
+                            low: { start: 16.5, end: 19.5 }
+                        },
+                        title: "Waterfront Dinner Feast",
+                        desc: "Enjoy a spacious, stroller-friendly lakeside dining experience.",
+                        highEnergy: {
+                            act: "Vibrant Waterfront Pizza: Oakfire",
+                            details: "Dine at Oakfire. Enjoy magnificent balconies and freshly baked wood-fired pizza overlooking the lake.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Oakfire+Lake+Geneva+WI"
+                        },
+                        lowEnergy: {
+                            act: "Scenic Beachfront Dinner: Pier 290",
+                            details: "Relax near cozy shoreline firepits with stroller-friendly lakeside patios.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Pier+290+Williams+Bay+WI"
+                        }
+                    },
+                    {
+                        id: "fri-slot-4",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 19.5, end: 22.0 },
+                            low: { start: 19.5, end: 22.0 }
+                        },
+                        title: "Waterfront Fireworks (9:15 PM)",
+                        desc: "Find a prime spot to watch spectacular holiday fireworks over the lake.",
+                        highEnergy: {
+                            act: "Riviera Docks Viewpoint",
+                            details: "Join the bustling crowd at Riviera waterfront to see colorful lights reflect off the lake.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Riviera+Docks+Lake+Geneva+WI"
+                        },
+                        lowEnergy: {
+                            act: "Geneva Square Car Spot",
+                            details: "Watch the fireworks comfortably from your car seat, ready to hit the highway easily afterward.",
+                            link: "https://www.google.com/maps/search/?api=1&query=Geneva+Square+Lake+Geneva+WI"
+                        }
+                    }
+                ]
+            },
+            "Sat": {
+                name: "Saturday, July 4",
+                slots: [
+                    {
+                        id: "sat-slot-1",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 0, end: 9.25 },
+                            low: { start: 0, end: 9.25 }
+                        },
+                        title: "Final Sleep-In & Pack Up",
+                        desc: "Take your time waking up at the apartment. Pack your bags for the airport departure."
+                    },
+                    {
+                        id: "sat-slot-2",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 9.25, end: 11.75 },
+                            low: { start: 9.25, end: 11.75 }
+                        },
+                        title: "O'Hare Departure Transit",
+                        desc: "Walk to Clark/Lake station, board the Blue Line back to ORD by 9:30 AM to allow plenty of buffer for holiday travel security.",
+                        link: "https://www.google.com/maps/search/?api=1&query=OHare+Airport+Chicago+IL"
+                    },
+                    {
+                        id: "sat-slot-3",
+                        canSwap: false,
+                        energyTimes: {
+                            high: { start: 11.75, end: 14.5 },
+                            low: { start: 11.75, end: 14.5 }
+                        },
+                        title: "Homeward Flight (ORD ➔ AUS)",
+                        desc: "Flight departs Chicago at 11:47 AM, landing back in Austin in the afternoon. Settle in and relax.",
+                        isFlight: true
+                    }
+                ]
+            }
+        };
+
+        const DISCOVERY_POOL = [
+            // ================== CHICAGO BREAKFAST SPOTS (Tue, Wed, Sat) ==================
+            {
+                id: "wildberry-breakfast",
+                title: "Wildberry Pancakes & Cafe",
+                category: "breakfast",
+                location: "Prudential Plaza, Chicago",
+                distance: "0.2 mi (4 min walk from 73 E Lake)",
+                rating: "⭐ 4.7",
+                price: "$$",
+                timeText: "Open 7:00 AM - 2:00 PM Daily",
+                desc: "Crowd favorite featuring signature berry-loaded pancakes, fresh-squeezed citrus blends, and cast-iron breakfast skillets.",
+                link: "https://www.google.com/maps/search/?api=1&query=Wildberry+Acai+Cafe+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "yolk-marina",
+                title: "Yolk - Marina City",
+                category: "breakfast",
+                location: "River North, Chicago",
+                distance: "0.4 mi (8 min walk from 73 E Lake)",
+                rating: "⭐ 4.5",
+                price: "$$",
+                timeText: "Open 7:00 AM - 3:00 PM Daily",
+                desc: "Bright, cheery setting offering five-egg scrambles, red velvet French toast, and strong espresso options.",
+                link: "https://www.google.com/maps/search/?api=1&query=Yolk+Marina+City+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "goddess-baker-loop",
+                title: "Goddess and the Baker",
+                category: "breakfast",
+                location: "Wabash Ave, Chicago",
+                distance: "0.1 mi (2 min walk from 73 E Lake)",
+                rating: "⭐ 4.6",
+                price: "$$",
+                timeText: "Open 7:00 AM - 4:00 PM Daily",
+                desc: "Exceptional flat white coffees, avocado toasts, and signature rainbow cakes. Ultra-convenient walking proximity.",
+                link: "https://www.google.com/maps/search/?api=1&query=Goddess+and+the+Baker+Loop+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            
+            // ================== CHICAGO BRUNCH SPOTS (Tue, Wed, Sat) ==================
+            {
+                id: "beatrix-loop-brunch",
+                title: "Beatrix Loop Restaurant",
+                category: "brunch",
+                location: "The Loop, Chicago",
+                distance: "0.7 mi (14 min walk / 5 min ride)",
+                rating: "⭐ 4.6",
+                price: "$$",
+                timeText: "Brunch Daily 8:00 AM - 3:00 PM",
+                desc: "Incredibly spacious, quiet, stroller-friendly corridors. Acclaimed for spiced honey lattes and fresh gluten-free pastries.",
+                link: "https://www.google.com/maps/search/?api=1&query=Beatrix+Loop+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "the-gage-brunch",
+                title: "The Gage Gastropub",
+                category: "brunch",
+                location: "Michigan Ave, Chicago",
+                distance: "0.4 mi (8 min walk from 73 E Lake)",
+                rating: "⭐ 4.5",
+                price: "$$$",
+                timeText: "Brunch from 11:00 AM on Weekdays",
+                desc: "An upscale culinary classic overlooking Millennium Park. Wide flat entries, superb Irish breakfasts, and rich wood booths.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Gage+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "cindy-rooftop-brunch",
+                title: "Cindy's Rooftop Experience",
+                category: "brunch",
+                location: "Michigan Ave, Chicago",
+                distance: "0.3 mi (6 min walk from 73 E Lake)",
+                rating: "⭐ 4.4",
+                price: "$$$$",
+                timeText: "Brunch from 11:00 AM",
+                desc: "Elite penthouse dining room with breathtaking, unobstructed views of Millennium Park and Lake Michigan.",
+                link: "https://www.google.com/maps/search/?api=1&query=Cindys+Rooftop+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+
+            // ================== CHICAGO LUNCH SPOTS (Tue, Wed, Sat) ==================
+            {
+                id: "riverwalk-cafe",
+                title: "Riverwalk Cafe",
+                category: "lunch",
+                location: "Chicago Riverwalk",
+                distance: "0.2 mi (4 min walk from 73 E Lake)",
+                rating: "⭐ 4.3",
+                price: "$$",
+                timeText: "Open 11:00 AM - 9:00 PM",
+                desc: "Unbeatable outdoor dining right on the river walk way. Great for gourmet sandwiches, tacos, and custom iced beverages.",
+                link: "https://www.google.com/maps/search/?api=1&query=Riverwalk+Cafe+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "purple-pig-lunch",
+                title: "The Purple Pig",
+                category: "lunch",
+                location: "Michigan Ave, Chicago",
+                distance: "0.3 mi (6 min walk from 73 E Lake)",
+                rating: "⭐ 4.6",
+                price: "$$$",
+                timeText: "Open 11:30 AM - 10:00 PM Daily",
+                desc: "World-class Mediterranean shareable plates, house-cured charcuterie, and cheeses in a stylish, spacious room.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Purple+Pig+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+
+            // ================== CHICAGO DINNER SPOTS (Tue, Wed, Sat) ==================
+            {
+                id: "chicago-dinner-cruise",
+                title: "Chicago River architecture Sunset Dinner Cruise",
+                category: "dinner",
+                location: "Riverwalk Docks, Chicago",
+                distance: "0.3 mi (6 min walk from 73 E Lake)",
+                rating: "⭐ 4.8",
+                price: "$$$$",
+                timeText: "Boarding 6:00 PM | Cruise 6:30 PM - 9:00 PM",
+                desc: "An elite 2.5-hour architecture and dining cruise. Features a delicious 3-course plated menu, a climate-controlled glass atrium, and wide, flat outer decks. Highly stroller accessible and incredibly smooth sailing.",
+                link: "https://www.google.com/maps/search/?api=1&query=Chicago+River+Dinner+Cruise+Docks+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "the-dearborn-chicago",
+                title: "The Dearborn [Classy Tavern/Bistro]",
+                category: "dinner",
+                location: "The Loop, Chicago",
+                distance: "0.3 mi (6 min walk)",
+                rating: "⭐ 4.6",
+                price: "$$",
+                timeText: "Open 11:00 AM - 10:00 PM Daily",
+                desc: "Exceptional Midwest tavern bistro. Beautiful leather booths, fully stroller accessible, high ceilings. Famed tavern-style pizzas and fresh seafood.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Dearborn+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "siena-tavern-chicago",
+                title: "Siena Tavern [Classic Italian]",
+                category: "dinner",
+                location: "Kinzie St, Chicago",
+                distance: "0.5 mi (10 min walk)",
+                rating: "⭐ 4.6",
+                price: "$$$",
+                timeText: "Dinner 5:00 PM - 11:00 PM",
+                desc: "Vibrant upscale Italian venue with truffled mushroom gnocchi and wood-fired pizzas. Highly accommodating with spacious layout.",
+                link: "https://www.google.com/maps/search/?api=1&query=Siena+Tavern+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "rpm-steak-chicago",
+                title: "RPM Steak [Upscale Modern Steak]",
+                category: "dinner",
+                location: "River North, Chicago",
+                distance: "0.6 mi (12 min walk / 4 min ride)",
+                rating: "⭐ 4.7",
+                price: "$$$$",
+                timeText: "Dinner 4:30 PM - 11:00 PM",
+                desc: "Vastly spacious, sleek, and highly-rated steakhouse. Excellent alternative for prime beef and exceptional seafood towers.",
+                link: "https://www.google.com/maps/search/?api=1&query=RPM+Steak+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "chicago-cut-steak",
+                title: "Chicago Cut Steakhouse [Waterfront Steak]",
+                category: "dinner",
+                location: "LaSalle Dr, Chicago",
+                distance: "0.6 mi (12 min walk)",
+                rating: "⭐ 4.6",
+                price: "$$$$",
+                timeText: "Dinner 4:30 PM - 10:30 PM",
+                desc: "Premier outdoor riverside terrace with outstanding city skyline views and prime dry-aged steak selections.",
+                link: "https://www.google.com/maps/search/?api=1&query=Chicago+Cut+Steakhouse+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "quartino-chicago",
+                title: "Quartino Ristorante [Italian Tapas]",
+                category: "dinner",
+                location: "State St, Chicago",
+                distance: "0.6 mi (12 min walk)",
+                rating: "⭐ 4.6",
+                price: "$$",
+                timeText: "Open 11:00 AM - 11:00 PM",
+                desc: "Extremely popular, bustling multi-level spot serving small Italian shareable plates, house-made pastas, and affordable wines.",
+                link: "https://www.google.com/maps/search/?api=1&query=Quartino+Ristorante+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "sunda-chicago",
+                title: "Sunda [Sushi & Asian Fusion]",
+                category: "dinner",
+                location: "Illinois St, Chicago",
+                distance: "0.7 mi (14 min walk / 6 min ride)",
+                rating: "⭐ 4.5",
+                price: "$$$",
+                timeText: "Open 5:00 PM - 10:00 PM Daily",
+                desc: "Stylish, high-energy dining room offering innovative sushi rolls, roasted pork belly, and creative East Asian fusion items.",
+                link: "https://www.google.com/maps/search/?api=1&query=Sunda+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+            {
+                id: "mercat-planxa",
+                title: "Mercat a la Planxa [Modern Spanish]",
+                category: "dinner",
+                location: "Michigan Ave (South Loop)",
+                distance: "1.0 mi (20 min walk / 7 min ride)",
+                rating: "⭐ 4.4",
+                price: "$$$",
+                timeText: "Dinner 5:00 PM - 10:00 PM",
+                desc: "Spacious Catalan dining room with vibrant tapestries, savory paellas, and premium sangrias near Grant Park.",
+                link: "https://www.google.com/maps/search/?api=1&query=Mercat+a+la+Planxa+Chicago+IL",
+                applicableDays: ["Tue", "Wed", "Sat"]
+            },
+
+            // ================== LAKE GENEVA BREAKFAST SPOTS (Thu, Fri) ==================
+            {
+                id: "simple-cafe-lg",
+                title: "Simple Cafe",
+                category: "breakfast",
+                location: "Broad St, Lake Geneva",
+                distance: "0.3 mi (6 min walk from Hotels)",
+                rating: "⭐ 4.7",
+                price: "$$",
+                timeText: "Open 6:00 AM - 3:00 PM Daily",
+                desc: "Wisconsin local farm-to-table eggs, bakery treats, and outstanding specialty coffee options.",
+                link: "https://www.google.com/maps/search/?api=1&query=Simple+Cafe+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "jonis-diner-lg",
+                title: "Joni's Diner",
+                category: "breakfast",
+                location: "Wells St, Lake Geneva",
+                distance: "0.6 mi (12 min walk)",
+                rating: "⭐ 4.4",
+                price: "$",
+                timeText: "Open 6:30 AM - 2:00 PM Daily",
+                desc: "Cozy, classic retro diner serving generous pancakes, thick bacon, and friendly local flavor.",
+                link: "https://www.google.com/maps/search/?api=1&query=Jonis+Diner+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+
+            // ================== LAKE GENEVA BRUNCH SPOTS (Thu, Fri) ==================
+            {
+                id: "baker-house-lg",
+                title: "Baker House Garden & Mansion",
+                category: "brunch",
+                location: "Wrigley Dr, Lake Geneva",
+                distance: "0.2 mi (4 min walk from Harbor)",
+                rating: "⭐ 4.5",
+                price: "$$$",
+                timeText: "Brunch from 11:00 AM Weekend Days",
+                desc: "Historic shoreline Victorian mansion. Splendid outdoor garden patio with tranquil shade trees overlooking the lake.",
+                link: "https://www.google.com/maps/search/?api=1&query=Baker+House+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "grandview-restaurant-lg",
+                title: "The Grandview Restaurant",
+                category: "brunch",
+                location: "Geneva National, WI",
+                distance: "3.8 mi (7 min drive from Hotels)",
+                rating: "⭐ 4.4",
+                price: "$$$",
+                timeText: "Brunch Daily 10:00 AM - 2:30 PM",
+                desc: "Panoramic lake vistas. Spacious, luxurious layout with premium waffle and mocktail menus.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Grandview+Restaurant+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+
+            // ================== LAKE GENEVA LUNCH SPOTS (Thu, Fri) ==================
+            {
+                id: "popeyes-lg",
+                title: "Popeye's On Lake Geneva",
+                category: "lunch",
+                location: "Wrigley Dr, Lake Geneva",
+                distance: "0.1 mi (2 min walk from Harbor)",
+                rating: "⭐ 4.3",
+                price: "$$",
+                timeText: "Open 11:30 AM - 9:00 PM",
+                desc: "Casual, legendary lakeside spot famed for its outdoor rotisserie pit, chicken baskets, and family-friendly patio space.",
+                link: "https://www.google.com/maps/search/?api=1&query=Popeyes+on+Lake+Geneva+Wrigley+Dr+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+
+            // ================== LAKE GENEVA DINNER SPOTS (Thu, Fri) ==================
+            {
+                id: "geneva-dinner-cruise",
+                title: "Lake Geneva Cruise Line Sunset Dinner Cruise",
+                category: "dinner",
+                location: "Riviera Docks, Lake Geneva",
+                distance: "0.1 mi (2 min walk from Harbor Shores)",
+                rating: "⭐ 4.7",
+                price: "$$$$",
+                timeText: "Boarding 5:45 PM | Cruise 6:00 PM - 8:30 PM",
+                desc: "Board the grand double-decker boat for a relaxing sunset cruise featuring a full plated dinner service. Perfect for both high energy or gentle baby pace due to calm waters, enclosed dining salons, and beautiful shoreline views.",
+                link: "https://www.google.com/maps/search/?api=1&query=Riviera+Docks+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "oakfire-lake-geneva",
+                title: "Oakfire Pizzeria [Woodfired Pizza]",
+                category: "dinner",
+                location: "Downtown Wrigley Dr, Lake Geneva",
+                distance: "0.1 mi (2 min walk)",
+                rating: "⭐ 4.6",
+                price: "$$",
+                timeText: "Open 11:00 AM - 10:00 PM",
+                desc: "Authentic wood-fired Neapolitan pizza, elevated outdoor dining terraces with splendid vistas across Riviera beach.",
+                link: "https://www.google.com/maps/search/?api=1&query=Oakfire+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "pier-290-lake",
+                title: "Pier 290 Shorefront [Seafood & Grill]",
+                category: "dinner",
+                location: "Williams Bay, WI",
+                distance: "6.0 mi (10 min lakeside drive)",
+                rating: "⭐ 4.5",
+                price: "$$$",
+                timeText: "Open 11:00 AM - 10:00 PM",
+                desc: "Outstanding sandy shoreline setting with cozy campfire rings, dynamic flat paths for stroller navigation.",
+                link: "https://www.google.com/maps/search/?api=1&query=Pier+290+Williams+Bay+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "next-door-pub",
+                title: "Next Door Pub & Pizzeria [American Pub]",
+                category: "dinner",
+                location: "Wells St, Lake Geneva",
+                distance: "0.9 mi (3 min drive from Hotels)",
+                rating: "⭐ 4.5",
+                price: "$$",
+                timeText: "Open 11:00 AM - 10:00 PM Daily",
+                desc: "Warm local pub environment. Family-sized pizzas, sandwiches, and large booths that easily accommodate strollers.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Next+Door+Pub+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+
+            // ================== LAKE GENEVA HOTELS SWAPS ==================
+            {
+                id: "cove-hotel-lg",
+                title: "The Cove of Lake Geneva",
+                category: "hotel",
+                location: "Center St, Lake Geneva",
+                distance: "0.0 mi (Base)",
+                rating: "⭐ 4.4",
+                price: "$$$",
+                timeText: "Check-in 4:00 PM",
+                desc: "Spacious multi-bedroom suites, family-friendly indoor swimming pools, and steps from the downtown shops.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Cove+of+Lake+Geneva+111+Center+St+Lake+Geneva+WI+53147",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "harbor-shores-lg",
+                title: "Harbor Shores on Lake Geneva",
+                category: "hotel",
+                location: "Wrigley Dr, Lake Geneva",
+                distance: "0.1 mi (2 min walk from Cove)",
+                rating: "⭐ 4.3",
+                price: "$$$",
+                timeText: "Check-in 4:00 PM",
+                desc: "Lakeside views with sliding balconies, flat strolling paths, and direct proximity to Riviera pier boat tours.",
+                link: "https://www.google.com/maps/search/?api=1&query=Harbor+Shores+on+Lake+Geneva+300+Wrigley+Dr+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "grand-geneva-resort",
+                title: "Grand Geneva Resort & Spa",
+                category: "hotel",
+                location: "Highway 50, Lake Geneva",
+                distance: "3.2 mi (8 min drive from Downtown)",
+                rating: "⭐ 4.6",
+                price: "$$$$",
+                timeText: "Check-in 4:00 PM",
+                desc: "Luxury countryside resort featuring private villas, upscale dining, extensive indoor waterparks, and spacious lawns.",
+                link: "https://www.google.com/maps/search/?api=1&query=Grand+Geneva+Resort+Lake+Geneva+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "abbey-resort-lg",
+                title: "The Abbey Resort & Spa",
+                category: "hotel",
+                location: "Fontana-on-Geneva-Lake, WI",
+                distance: "10.2 mi (15 min drive)",
+                rating: "⭐ 4.4",
+                price: "$$$",
+                timeText: "Check-in 4:00 PM",
+                desc: "Magnificent marina setting with full-service indoor pools, spacious family units, and lush green strollable grounds.",
+                link: "https://www.google.com/maps/search/?api=1&query=The+Abbey+Resort+Fontana+WI",
+                applicableDays: ["Thu", "Fri"]
+            },
+
+            // ================== LIVE VERIFIED EVENTS ==================
+            {
+                id: "cubs-padres-event",
+                title: "Chicago Cubs vs San Diego Padres",
+                category: "events",
+                location: "Wrigley Field, Chicago",
+                distance: "5.5 mi (CTA Red Line Direct)",
+                rating: "⭐ 4.8",
+                price: "$$$",
+                timeText: "Tue Jun 30 & Wed Jul 1 Game",
+                desc: "High energy Wrigleyville baseball atmosphere. Highly recommended to carry toddler hearing protection if attending.",
+                link: "https://www.google.com/maps/search/?api=1&query=Wrigley+Field+Chicago+IL",
+                applicableDays: ["Tue", "Wed"]
+            },
+            {
+                id: "wave-deadhead-fest",
+                title: "Wave That Flag Tribute Festival",
+                category: "events",
+                location: "Jennings Holler, WI",
+                distance: "4.5 mi (10 min drive)",
+                rating: "⭐ 4.5",
+                price: "$$",
+                timeText: "Thu Jul 2 - Sat Jul 4 Series",
+                desc: "Laid-back, spacious outdoor gathering with live Grateful Dead tribute bands. Cozy and stroller-friendly grass lawns.",
+                link: "https://www.visitlakegeneva.com/events/",
+                applicableDays: ["Thu", "Fri"]
+            },
+            {
+                id: "grand-geneva-fireworks-live",
+                title: "Grand Geneva Resort Independence Show",
+                category: "events",
+                location: "Grand Geneva, WI",
+                distance: "3.2 mi (8 min drive)",
+                rating: "⭐ 4.6",
+                price: "Free",
+                timeText: "Friday July 3 (Dusk / ~9:15 PM)",
+                desc: "Spacious lawns and open fields. Excellent visibility directly from park locations with minimal toddler crowding.",
+                link: "https://www.google.com/maps/search/?api=1&query=Grand+Geneva+Resort+Lake+Geneva+WI",
+                applicableDays: ["Fri"]
+            },
+            {
+                id: "liberty-lake-drone-live",
+                title: "Liberty on the Lake American Drone Show",
+                category: "events",
+                location: "Flat Iron Park, Lake Geneva",
+                distance: "0.2 mi (4 min walk)",
+                rating: "⭐ 4.7",
+                price: "Free",
+                timeText: "Saturday July 4 (9:00 PM)",
+                desc: "American celebration custom quiet drone light show. Fully silent and outstanding for sensitive baby ears.",
+                link: "https://www.google.com/maps/search/?api=1&query=Flat+Iron+Park+Lake+Geneva+WI",
+                applicableDays: ["Sat"]
+            }
+        ];
+
+        let ITINERARY_DATA = JSON.parse(JSON.stringify(ORIGINAL_ITINERARY_DATA));
+        let selectedDay = "Tue";
+        let energyLevel = "low"; // Default to Gentle Baby Pace as preferred
+        let lazyOffsetMinutes = 0;
+        let activeTab = "itinerary";
+        let loggedExpenses = [];
+        let discoverActiveMood = "brunch"; // Default categories for gentle baby pace
+        let selectedSwapAlternative = null;
+        let customSwapsCount = 0;
+        
+        let checklistItems = [
+            { id: 'item-fan', title: 'Stroller Fan Fully Charged', desc: 'Absolutely essential for warm afternoons.', checked: false },
+            { id: 'item-monitor', title: 'Baby Monitor App Ready', desc: 'Useful for sleeping in separate hotel rooms.', checked: false }
+        ];
+
+        let audioCtx = null;
+        let noiseNode = null;
+        let gainNode = null;
+        let isPlayingNoise = false;
+        let activeNoiseType = null;
+
+        window.onload = function() {
+            loadPreferences();
+            detectActiveDayAndHour();
+            updateTimeline();
+            updateStrollerAdvice();
+            renderExpenses();
+            renderChecklist();
+            renderDiscoverTab();
+            startClockUpdater();
+        };
+
+        function openTechModal() {
+            document.getElementById('tech-modal').classList.remove('hidden');
+        }
+
+        function closeTechModal() {
+            document.getElementById('tech-modal').classList.add('hidden');
+        }
+
+        function copyStartupPitch() {
+            const pitchText = "CleverOps is an elite AI-driven custom solutions startup founded by Ahad. We engineer hyper-scalable web apps, automate complex operations, and rapidly build production-ready software. Contact us at hello@cleverops.ai to architect your custom tech solutions today!";
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = pitchText;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            triggerToast("CleverOps solutions brief copied!");
+        }
+
+        function triggerToast(msg) {
+            const toast = document.getElementById('custom-toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('opacity-0', 'scale-90');
+            toast.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90');
+                toast.classList.remove('opacity-100', 'scale-100');
+            }, 3000);
+        }
+
+        function savePreferences() {
+            localStorage.setItem('lazyOffset', lazyOffsetMinutes);
+            localStorage.setItem('energyLevel', energyLevel);
+            localStorage.setItem('travelExpenses', JSON.stringify(loggedExpenses));
+            localStorage.setItem('babyChecklistItems', JSON.stringify(checklistItems));
+            localStorage.setItem('customSwappedItinerary', JSON.stringify(ITINERARY_DATA));
+            localStorage.setItem('customSwapsCount', customSwapsCount);
+        }
+
+        function loadPreferences() {
+            const savedOffset = localStorage.getItem('lazyOffset');
+            const savedEnergy = localStorage.getItem('energyLevel');
+            const savedExpenses = localStorage.getItem('travelExpenses');
+            const savedChecklist = localStorage.getItem('babyChecklistItems');
+            const savedItinerary = localStorage.getItem('customSwappedItinerary');
+            const savedSwapsCount = localStorage.getItem('customSwapsCount');
+
+            if (savedOffset !== null) lazyOffsetMinutes = parseInt(savedOffset);
+            if (savedEnergy !== null) energyLevel = savedEnergy;
+            if (savedExpenses !== null) loggedExpenses = JSON.parse(savedExpenses);
+            if (savedChecklist !== null) checklistItems = JSON.parse(savedChecklist);
+            if (savedItinerary !== null) ITINERARY_DATA = JSON.parse(savedItinerary);
+            if (savedSwapsCount !== null) {
+                customSwapsCount = parseInt(savedSwapsCount);
+                const diagSwaps = document.getElementById('diag-swaps');
+                if (diagSwaps) diagSwaps.textContent = customSwapsCount;
+            }
+        }
+
+        function dismissGuide() {
+            document.getElementById('quick-guide-modal').classList.add('hidden');
+        }
+
+        function showGuide() {
+            document.getElementById('quick-guide-modal').classList.remove('hidden');
+        }
+
+        function detectActiveDayAndHour() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const date = now.getDate();
+
+            if (year === 2026 && month === 5 && date === 30) {
+                selectedDay = "Tue";
+            } else if (year === 2026 && month === 6 && date === 1) {
+                selectedDay = "Wed";
+            } else if (year === 2026 && month === 6 && date === 2) {
+                selectedDay = "Thu";
+            } else if (year === 2026 && month === 6 && date === 3) {
+                selectedDay = "Fri";
+            } else if (year === 2026 && month === 6 && date === 4) {
+                selectedDay = "Sat";
+            } else {
+                selectedDay = "Tue"; // Default landing preview
+            }
+        }
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+            document.getElementById('tab-content-' + tabId).classList.remove('hidden');
+
+            const tabs = ['itinerary', 'discover', 'babykit', 'ledger'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('tab-btn-' + t);
+                if (t === tabId) {
+                    btn.className = "flex flex-col items-center justify-center w-16 h-full transition-all text-amber-500";
+                } else {
+                    btn.className = "flex flex-col items-center justify-center w-16 h-full transition-all text-slate-500 hover:text-slate-300";
+                }
+            });
+
+            if (tabId === 'discover') {
+                renderDiscoverTab();
+            }
+        }
+
+        function setDay(dayCode) {
+            selectedDay = dayCode;
+            updateTimeline();
+            updateStrollerAdvice();
+            renderDiscoverTab();
+        }
+
+        function setEnergy(level) {
+            energyLevel = level;
+            if (level === 'high') {
+                discoverActiveMood = 'breakfast';
+            } else {
+                discoverActiveMood = 'brunch';
+            }
+            savePreferences();
+            updateTimeline();
+            updateStrollerAdvice();
+            renderDiscoverTab();
+        }
+
+        function changeOffset(minutes) {
+            lazyOffsetMinutes = minutes;
+            savePreferences();
+            updateTimeline();
+        }
+
+        function resetOffset() {
+            lazyOffsetMinutes = 0;
+            savePreferences();
+            updateTimeline();
+        }
+
+        function getOffsetHours() {
+            return lazyOffsetMinutes / 60;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            const minStr = minutes < 10 ? '0' + minutes : minutes;
+            const clockEl = document.getElementById('current-clock');
+            if (clockEl) {
+                clockEl.textContent = hours + ':' + minStr + ' ' + ampm;
+            }
+        }
+
+        function startClockUpdater() {
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function updateStrollerAdvice() {
+            const container = document.getElementById('stroller-advice-card');
+            let content = '';
+
+            if (selectedDay === 'Tue' || selectedDay === 'Wed') {
+                content = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Chicago City</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Sidewalks near <strong>73 E Lake St</strong> are wide and flat.
+                    </p>
+                    <ul class="text-[11px] text-slate-400 mt-2 space-y-1 list-disc pl-4">
+                        <li>Extend the sun canopy when strolling the Loop.</li>
+                        <li>High-rise wind corridors might blow a breeze; pack muslin wrap.</li>
+                    </ul>
+                `;
+            } else if (selectedDay === 'Thu' || selectedDay === 'Fri') {
+                content = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-teal-500/20 text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Lake Geneva</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Boardwalk is gorgeous but has deep lake breezes.
+                    </p>
+                    <ul class="text-[11px] text-slate-400 mt-2 space-y-1 list-disc pl-4">
+                        <li><strong>Stroller Fan:</strong> Charged and running on sunny shoreline spots.</li>
+                        <li>Keep a warm light blanket handy for windy pier docks.</li>
+                    </ul>
+                `;
+            } else {
+                content = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-slate-500/20 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Departure Day</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Keep items accessible below stroller basket inside terminal.
+                    </p>
+                `;
+            }
+
+            container.innerHTML = content;
+        }
+
+        /**
+         * Calculates estimated Blue Line departures based on flight landing hour.
+         * Integrates a robust 30-minute baggage retrieval & walking buffer.
+         * Returns an array of formatted strings depicting future departure intervals.
+         */
+        function getBlueLineDepartures(flightLandingHourDecimal) {
+            // Include deplaning, baggage claim, and stroller rollout buffer (30 minutes)
+            let estimatedStationArrivalHour = flightLandingHourDecimal + 0.5;
+            
+            let departures = [];
+            let currentMinutesTotal = estimatedStationArrivalHour * 60; // total absolute minutes from midnight
+            
+            // Round up arrival time to nearest neat 5-minute schedule interval
+            let startScheduledMinute = Math.ceil(currentMinutesTotal / 5) * 5;
+            
+            // Generate next 4 sequential CTA departures (intervals average 10 minutes)
+            for (let i = 0; i < 4; i++) {
+                let scheduledDepartureMinute = startScheduledMinute + (i * 10);
+                let hourValue = Math.floor(scheduledDepartureMinute / 60) % 24;
+                let minuteValue = Math.round(scheduledDepartureMinute % 60);
+                
+                let ampm = hourValue >= 12 ? 'PM' : 'AM';
+                let formattedHour = hourValue % 12;
+                formattedHour = formattedHour ? formattedHour : 12;
+                let formattedMinute = minuteValue < 10 ? '0' + minuteValue : minuteValue;
+                
+                departures.push(`${formattedHour}:${formattedMinute} ${ampm}`);
+            }
+            return departures;
+        }
+
+        function updateTimeline() {
+            document.querySelectorAll('.day-tab').forEach(tab => {
+                tab.className = "day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-slate-800 bg-slate-900 text-slate-300";
+            });
+            const activeTabElement = document.getElementById('day-tab-' + selectedDay);
+            if (activeTabElement) {
+                activeTabElement.className = "day-tab flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border border-amber-500 bg-amber-500/10 text-amber-400";
+            }
+
+            document.getElementById('energy-tab-high').className = "flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all " + 
+                (energyLevel === 'high' ? "bg-red-500/10 border border-red-500/30 text-red-400" : "text-slate-400");
+            document.getElementById('energy-tab-low').className = "flex-1 py-2 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all " + 
+                (energyLevel === 'low' ? "bg-teal-500/10 border border-teal-500/30 text-teal-400" : "text-slate-400");
+
+            const offsetLabel = document.getElementById('offset-display');
+            if (lazyOffsetMinutes === 0) {
+                offsetLabel.textContent = "On Time";
+                offsetLabel.className = "text-xs font-bold text-teal-400 bg-teal-950/40 border border-teal-900/50 px-2.5 py-0.5 rounded-full";
+            } else {
+                offsetLabel.textContent = `+${lazyOffsetMinutes / 60} Hr Late`;
+                offsetLabel.className = "text-xs font-bold text-amber-400 bg-amber-950/40 border border-amber-900/50 px-2.5 py-0.5 rounded-full";
+            }
+
+            const dayData = ITINERARY_DATA[selectedDay];
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = ""; 
+
+            const now = new Date();
+            const currentHourDecimal = now.getHours() + (now.getMinutes() / 60);
+            let flightActive = false;
+
+            dayData.slots.forEach(slot => {
+                let startSetting = slot.startHour;
+                let endSetting = slot.endHour;
+
+                if (slot.energyTimes) {
+                    if (!slot.energyTimes[energyLevel]) {
+                        return; // Skip drawing breakfast slot during Gentle Baby Pace wakeups
+                    }
+                    startSetting = slot.energyTimes[energyLevel].start;
+                    endSetting = slot.energyTimes[energyLevel].end;
+                }
+
+                let adjustedStart = startSetting + getOffsetHours();
+                let adjustedEnd = endSetting + getOffsetHours();
+
+                if (adjustedStart >= 24) adjustedStart = adjustedStart - 24;
+                if (adjustedEnd >= 24) adjustedEnd = adjustedEnd - 24;
+
+                const isCurrent = currentHourDecimal >= adjustedStart && currentHourDecimal < adjustedEnd;
+
+                if (slot.isFlight && isCurrent) {
+                    flightActive = true;
+                    document.getElementById('flight-title').textContent = slot.title;
+                    document.getElementById('flight-details').textContent = slot.desc;
+                }
+
+                const details = energyLevel === 'high' ? slot.highEnergy : slot.lowEnergy;
+
+                const card = document.createElement('div');
+                card.className = "relative group transition-all duration-300 " + (isCurrent ? "scale-[1.01]" : "");
+
+                const mapButton = (details && details.link) ? `
+                    <a href="${details.link}" target="_blank" class="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 rounded-xl hover:bg-amber-500/20 transition-all">
+                        <span class="material-icons text-xs">map</span> Maps
+                    </a>
+                ` : '';
+
+                const formatTime = (decimal) => {
+                    let h = Math.floor(decimal);
+                    const m = Math.round((decimal - h) * 60);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    h = h ? h : 12;
+                    const mStr = m < 10 ? '0' + m : m;
+                    return `${h}:${mStr} ${ampm}`;
+                };
+
+                const timeStr = `${formatTime(adjustedStart)} - ${formatTime(adjustedEnd)}`;
+                const isOverridden = slot.isCustomSwapped === true;
+                const showSwapButton = slot.canSwap === true;
+
+                // Dynamically compile CTA departure schedule if active
+                let departureBoardHtml = '';
+                if (slot.isTrainTransit) {
+                    // Flight lands at 18.25 + offset
+                    let flightLandingTime = 18.25 + getOffsetHours();
+                    let scheduleList = getBlueLineDepartures(flightLandingTime);
+                    departureBoardHtml = `
+                        <div class="mt-3.5 bg-slate-950 border border-indigo-500/30 rounded-xl p-3 text-left">
+                            <span class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest flex items-center gap-1.5">
+                                <span class="material-icons text-xs text-indigo-400 animate-pulse">train</span> Dynamic CTA Blue Line Board (ORD)
+                            </span>
+                            <span class="block text-[8px] text-slate-500 mt-0.5 mb-2">Reflects 30-min stroller deplane + luggage retrieval buffer</span>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                ${scheduleList.map((timeString, idx) => `
+                                    <div class="p-1.5 rounded-lg border text-center ${
+                                        idx === 0 
+                                        ? 'bg-amber-500/10 border-amber-500/40' 
+                                        : 'bg-slate-900 border-slate-800'
+                                    }">
+                                        <span class="block text-[10px] font-mono font-bold ${idx === 0 ? 'text-amber-400' : 'text-slate-300'}">${timeString}</span>
+                                        <span class="block text-[7px] uppercase tracking-wider mt-0.5 ${idx === 0 ? 'text-amber-500 font-bold' : 'text-slate-500'}">
+                                            ${idx === 0 ? 'Best' : 'Next'}
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <span class="absolute -left-[31px] top-1.5 rounded-full w-5 h-5 flex items-center justify-center border-2 transition-all duration-300 ${
+                        isCurrent 
+                        ? "bg-amber-500 border-slate-950 scale-125 shadow-lg shadow-amber-500/20" 
+                        : "bg-slate-900 border-slate-800"
+                    }">
+                        <span class="w-1.5 h-1.5 rounded-full ${isCurrent ? "bg-slate-950" : "bg-slate-700"}"></span>
+                    </span>
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-mono font-bold tracking-wider ${isCurrent ? "text-amber-400" : "text-slate-500"}">${timeStr}</span>
+                        ${isOverridden ? `
+                            <button onclick="resetSlotToOriginal('${selectedDay}', '${slot.id}')" class="text-[9px] font-bold text-rose-400 hover:text-rose-300 flex items-center gap-0.5 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full">
+                                <span class="material-icons text-[10px]">history</span> Restore Original
+                            </button>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="mt-1.5 bg-slate-900 border transition-all duration-300 p-4.5 rounded-2xl ${
+                        isCurrent 
+                        ? "border-amber-500/50 shadow-xl shadow-amber-500/5" 
+                        : "border-slate-800/80 hover:border-slate-700/80"
+                    }">
+                        <div class="flex justify-between items-start gap-2">
+                            <h3 class="text-sm font-bold text-white text-left">${slot.title}</h3>
+                            ${isCurrent ? '<span class="bg-amber-500/20 text-amber-400 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">Active</span>' : ''}
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 text-left leading-relaxed">${slot.desc}</p>
+                        
+                        ${departureBoardHtml}
+
+                        ${details ? `
+                            <div class="mt-4 pt-3.5 border-t border-slate-800/60 flex flex-col gap-1 text-left">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                                    <span class="material-icons text-xs text-slate-400">assistant</span> Current Activity Target:
+                                </span>
+                                <h4 class="text-xs font-bold text-slate-200 mt-1">${details.act}</h4>
+                                <p class="text-[11px] text-slate-400 leading-relaxed">${details.details}</p>
+                                <div class="flex flex-wrap items-center gap-2 mt-2">
+                                    ${mapButton}
+                                    ${showSwapButton ? `
+                                        <button onclick="openSwapDirectly('${slot.id}', '${slot.swapCategory}')" class="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 rounded-xl hover:bg-indigo-500/20 transition-all">
+                                            <span class="material-icons text-xs">sync</span> Switch Spot
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            document.getElementById('flight-spotlight').classList.toggle('hidden', !flightActive);
+        }
+
+        function setDiscoverMood(mood) {
+            discoverActiveMood = mood;
+            setDiscoverMoodStyleOnly(discoverActiveMood);
+            renderDiscoverTab();
+        }
+
+        function renderDiscoverTab() {
+            const container = document.getElementById('discover-options-container');
+            const locationAnchorText = document.getElementById('location-anchor-text');
+            const hotelFilterButton = document.getElementById('mood-btn-hotel');
+            container.innerHTML = '';
+
+            const isLakeGeneva = (selectedDay === 'Thu' || selectedDay === 'Fri');
+            if (isLakeGeneva) {
+                locationAnchorText.textContent = "The Cove / Harbor Shores, Lake Geneva";
+                hotelFilterButton.classList.remove('hidden'); 
+            } else {
+                locationAnchorText.textContent = "73 E Lake St, Chicago Loop";
+                hotelFilterButton.classList.add('hidden'); 
+                if (discoverActiveMood === 'hotel') {
+                    discoverActiveMood = 'breakfast'; 
+                }
+            }
+
+            setDiscoverMoodStyleOnly(discoverActiveMood);
+
+            const filtered = DISCOVERY_POOL.filter(item => {
+                const matchesMood = (item.category === discoverActiveMood);
+                const matchesDay = item.applicableDays.includes(selectedDay);
+                return matchesMood && matchesDay;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
+                        <span class="material-icons text-slate-600 text-3xl">restaurant_menu</span>
+                        <p class="text-xs text-slate-500 mt-2">No custom ${discoverActiveMood} options matched for this segment.</p>
+                        <p class="text-[10px] text-slate-600 mt-1">Try toggling another category above!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(option => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800/80 p-4 rounded-2xl space-y-3 hover:border-slate-700 transition-all text-left";
+                
+                let icon = 'restaurant';
+                let iconColor = 'text-amber-400';
+                if (option.category === 'events') {
+                    icon = 'local_activity';
+                    iconColor = 'text-emerald-400';
+                } else if (option.category === 'hotel') {
+                    icon = 'hotel';
+                    iconColor = 'text-sky-400';
+                } else if (option.category === 'brunch') {
+                    icon = 'breakfast_dining';
+                    iconColor = 'text-teal-400';
+                } else if (option.category === 'breakfast') {
+                    icon = 'bakery_dining';
+                    iconColor = 'text-indigo-400';
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="material-icons ${iconColor} text-lg">${icon}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">${option.category}</span>
+                        </div>
+                        <a href="${option.link}" target="_blank" class="text-xs text-indigo-400 hover:underline flex items-center gap-0.5">
+                            <span class="material-icons text-[11px]">map</span> Map
+                        </a>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline justify-between">
+                            <h4 class="text-sm font-bold text-white">${option.title}</h4>
+                            <div class="flex items-center gap-1.5 text-xs text-slate-300">
+                                <span class="text-amber-400 font-bold">${option.rating}</span>
+                                <span class="text-emerald-400 font-mono font-bold">${option.price}</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-amber-500 font-mono block mt-0.5">${option.timeText}</span>
+                        <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">${option.desc}</p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-800/80 flex flex-col gap-2">
+                        <div class="flex items-center gap-1.5 text-[10px] text-indigo-300">
+                            <span class="material-icons text-[11px]">place</span>
+                            <span>Distance: <strong>${option.distance}</strong></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] text-slate-500">${option.location}</span>
+                            <button onclick="triggerSwapSelection('${option.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-[10px] rounded-xl transition-all flex items-center gap-1 shadow-lg shadow-indigo-600/10">
+                                <span class="material-icons text-[11px]">swap_horiz</span> Swap In
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function setDiscoverMoodStyleOnly(mood) {
+            const moods = ['breakfast', 'brunch', 'lunch', 'dinner', 'hotel', 'events'];
+            moods.forEach(m => {
+                const btn = document.getElementById('mood-btn-' + m);
+                if (btn) {
+                    if (m === mood) {
+                        btn.className = "py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/10";
+                    } else {
+                        btn.className = "py-2 px-0.5 rounded-xl text-[10px] font-bold text-center transition-all text-slate-400 hover:text-slate-200";
+                    }
+                }
+            });
+        }
+
+        function openSwapDirectly(slotId, category) {
+            const slot = ITINERARY_DATA[selectedDay].slots.find(s => s.id === slotId);
+            if (!slot) return;
+
+            if (category === 'breakfast-brunch') {
+                discoverActiveMood = (energyLevel === 'high') ? 'breakfast' : 'brunch';
+            } else if (category === 'dinner') {
+                discoverActiveMood = 'dinner';
+            } else if (category === 'hotel') {
+                discoverActiveMood = 'hotel';
+            } else if (category === 'lunch') {
+                discoverActiveMood = 'lunch';
+            } else {
+                discoverActiveMood = 'breakfast';
+            }
+
+            switchTab('discover');
+            triggerToast(`Select alternative ${discoverActiveMood} to swap into schedule!`);
+        }
+
+        function triggerSwapSelection(optionId) {
+            const option = DISCOVERY_POOL.find(o => o.id === optionId);
+            if (!option) return;
+
+            selectedSwapAlternative = option;
+            document.getElementById('swapper-target-day').textContent = ITINERARY_DATA[selectedDay].name;
+            document.getElementById('swapper-target-name').textContent = option.title;
+
+            const slotsList = document.getElementById('swapper-slots-list');
+            slotsList.innerHTML = '';
+
+            const daySlots = ITINERARY_DATA[selectedDay].slots;
+            daySlots.forEach(slot => {
+                let isCompatible = false;
+                if (slot.canSwap) {
+                    if (option.category === 'hotel' && slot.swapCategory === 'hotel') isCompatible = true;
+                    if (option.category === 'dinner' && slot.swapCategory === 'dinner') isCompatible = true;
+                    if (option.category === 'lunch' && slot.swapCategory === 'lunch') isCompatible = true;
+                    if (option.category === 'breakfast' && slot.swapCategory === 'breakfast-brunch') isCompatible = true;
+                    if (option.category === 'brunch' && slot.swapCategory === 'breakfast-brunch') isCompatible = true;
+                    if (option.category === 'events' && (slot.swapCategory === 'dinner' || slot.swapCategory === 'breakfast-brunch')) isCompatible = true;
+                }
+
+                if (isCompatible) {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500/50 transition-all flex flex-col gap-0.5 active:scale-98 mb-2";
+                    btn.onclick = () => confirmSwapping(slot.id);
+                    btn.innerHTML = `
+                        <span class="text-[10px] font-mono text-amber-500 font-bold">${slot.title}</span>
+                        <span class="text-xs text-slate-300 font-bold">Replace: ${slot.title}</span>
+                        <span class="text-[10px] text-slate-500 truncate mt-0.5">${slot.desc}</span>
+                    `;
+                    slotsList.appendChild(btn);
+                }
+            });
+
+            if (slotsList.innerHTML === '') {
+                slotsList.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">No active swappable targets on this day matching this category.</div>`;
+            }
+
+            document.getElementById('swapper-modal').classList.remove('hidden');
+        }
+
+        function closeSwapperModal() {
+            document.getElementById('swapper-modal').classList.add('hidden');
+            selectedSwapAlternative = null;
+        }
+
+        function confirmSwapping(slotId) {
+            if (!selectedSwapAlternative) return;
+
+            const dayData = ITINERARY_DATA[selectedDay];
+            const slotIndex = dayData.slots.findIndex(s => s.id === slotId);
+            
+            if (slotIndex !== -1) {
+                dayData.slots[slotIndex].title = selectedSwapAlternative.title;
+                dayData.slots[slotIndex].desc = selectedSwapAlternative.desc;
+                dayData.slots[slotIndex].isCustomSwapped = true; 
+
+                dayData.slots[slotIndex].highEnergy = {
+                    act: selectedSwapAlternative.title,
+                    details: selectedSwapAlternative.desc,
+                    link: selectedSwapAlternative.link
+                };
+                dayData.slots[slotIndex].lowEnergy = {
+                    act: selectedSwapAlternative.title,
+                    details: selectedSwapAlternative.desc,
+                    link: selectedSwapAlternative.link
+                };
+
+                customSwapsCount++;
+                document.getElementById('diag-swaps').textContent = customSwapsCount;
+
+                savePreferences();
+                updateTimeline();
+                closeSwapperModal();
+                switchTab('itinerary');
+                triggerToast("Timeline dynamically updated!");
+            }
+        }
+
+        function resetSlotToOriginal(dayCode, slotId) {
+            const originalSlot = ORIGINAL_ITINERARY_DATA[dayCode].slots.find(s => s.id === slotId);
+            if (!originalSlot) return;
+
+            const targetDaySlots = ITINERARY_DATA[dayCode].slots;
+            const slotIndex = targetDaySlots.findIndex(s => s.id === slotId);
+
+            if (slotIndex !== -1) {
+                ITINERARY_DATA[dayCode].slots[slotIndex] = JSON.parse(JSON.stringify(originalSlot));
+                savePreferences();
+                updateTimeline();
+                triggerToast("Original itinerary slot restored.");
+            }
+        }
+
+        function toggleNoise(type) {
+            try {
+                if (isPlayingNoise && activeNoiseType === type) {
+                    stopNoise();
+                    return;
+                }
+                
+                stopNoise(); 
+
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                activeNoiseType = type;
+                const bufferSize = 2 * audioCtx.sampleRate;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    if (type === 'ocean') {
+                        output[i] = (lastOut + (0.02 * white)) / 1.02;
+                        lastOut = output[i];
+                        output[i] *= 3.5; 
+                    } else {
+                        output[i] = white * 0.4;
+                    }
+                }
+
+                noiseNode = audioCtx.createBufferSource();
+                noiseNode.buffer = noiseBuffer;
+                noiseNode.loop = true;
+
+                gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime); 
+
+                noiseNode.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                noiseNode.start();
+                isPlayingNoise = true;
+                updateNoiseUI();
+
+            } catch (err) {
+                console.error("Audio Context failed to initialize: ", err);
+                document.getElementById('synth-status').textContent = "Audio unsupported or blocked.";
+            }
+        }
+
+        function stopNoise() {
+            if (noiseNode) {
+                try {
+                    noiseNode.stop();
+                } catch(e) {}
+                noiseNode.disconnect();
+                noiseNode = null;
+            }
+            isPlayingNoise = false;
+            activeNoiseType = null;
+            updateNoiseUI();
+        }
+
+        function updateNoiseUI() {
+            const btnWhite = document.getElementById('btn-sound-white');
+            const btnOcean = document.getElementById('btn-sound-ocean');
+            const waveBars = document.getElementById('audio-wave-bars');
+            const statusText = document.getElementById('synth-status');
+
+            btnWhite.className = "flex flex-col items-center justify-center p-3.5 bg-slate-900 border border-slate-800 rounded-2xl transition-all";
+            btnOcean.className = "flex flex-col items-center justify-center p-3.5 bg-slate-900 border border-slate-800 rounded-2xl transition-all";
+            waveBars.classList.add('opacity-0');
+
+            if (isPlayingNoise) {
+                waveBars.classList.remove('opacity-0');
+                if (activeNoiseType === 'white') {
+                    btnWhite.className = "flex flex-col items-center justify-center p-3.5 bg-indigo-950/80 border border-indigo-500 rounded-2xl transition-all shadow-lg shadow-indigo-500/10";
+                    statusText.innerHTML = "<span class='text-indigo-400 font-bold'>Playing White Noise...</span>";
+                    document.getElementById('diag-synth').textContent = "STATIC (WHITE)";
+                } else if (activeNoiseType === 'ocean') {
+                    btnOcean.className = "flex flex-col items-center justify-center p-3.5 bg-teal-950/80 border border-teal-500 rounded-2xl transition-all shadow-lg shadow-teal-500/10";
+                    statusText.innerHTML = "<span class='text-teal-400 font-bold'>Playing Deep Ocean...</span>";
+                    document.getElementById('diag-synth').textContent = "SURF (BROWN)";
+                }
+            } else {
+                statusText.textContent = "Synthesizer is currently sleeping";
+                document.getElementById('diag-synth').textContent = "SLEEPING";
+            }
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (checklistItems.length === 0) {
+                container.innerHTML = '<div class="text-center text-xs text-slate-500 py-4">No checklist items yet. Add custom items below!</div>';
+                document.getElementById('kit-progress').textContent = '0 of 0 Done';
+                return;
+            }
+
+            let checkedCount = 0;
+
+            checklistItems.forEach((item) => {
+                if (item.checked) checkedCount++;
+
+                const row = document.createElement('div');
+                row.className = "flex items-start justify-between gap-3 p-2.5 rounded-xl hover:bg-slate-900/40 transition-all border border-slate-900/40 text-left";
+
+                row.innerHTML = `
+                    <label class="flex items-start gap-3 cursor-pointer flex-1 min-w-0">
+                        <input type="checkbox" onchange="toggleChecklistItem('${item.id}')" ${item.checked ? 'checked' : ''} class="mt-0.5 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500/50 w-4 h-4 flex-shrink-0">
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold ${item.checked ? 'text-slate-500 line-through' : 'text-slate-200'} block truncate">${item.title}</span>
+                            ${item.desc ? `<span class="text-[10px] text-slate-400 block mt-0.5 leading-normal ${item.checked ? 'text-slate-600' : ''}">${item.desc}</span>` : ''}
+                        </div>
+                    </label>
+                    <button onclick="deleteChecklistItem('${item.id}')" class="text-slate-500 hover:text-red-400 transition-colors self-start mt-0.5 flex-shrink-0" title="Delete Item">
+                        <span class="material-icons text-sm">delete</span>
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+
+            document.getElementById('kit-progress').textContent = `${checkedCount} of ${checklistItems.length} Done`;
+        }
+
+        function toggleChecklistItem(id) {
+            checklistItems = checklistItems.map(item => {
+                if (item.id === id) {
+                    return { ...item, checked: !item.checked };
+                }
+                return item;
+            });
+            savePreferences();
+            renderChecklist();
+        }
+
+        function deleteChecklistItem(id) {
+            checklistItems = checklistItems.filter(item => item.id !== id);
+            savePreferences();
+            renderChecklist();
+        }
+
+        function addCustomChecklistItem() {
+            const titleInput = document.getElementById('checklist-title-input');
+            const descInput = document.getElementById('checklist-desc-input');
+            const title = titleInput.value.trim();
+            const desc = descInput.value.trim();
+
+            if (!title) return;
+
+            const newItem = {
+                id: 'custom-' + Date.now(),
+                title: title,
+                desc: desc || '',
+                checked: false
+            };
+
+            checklistItems.push(newItem);
+            titleInput.value = '';
+            descInput.value = '';
+            savePreferences();
+            renderChecklist();
+        }
+
+        function addPresetExpense(name, amount, category) {
+            loggedExpenses.push({
+                id: Date.now(),
+                name: name,
+                amount: parseFloat(amount),
+                category: category
+            });
+            savePreferences();
+            renderExpenses();
+        }
+
+        function logCustomExpense() {
+            const nameInput = document.getElementById('expense-name');
+            const amountInput = document.getElementById('expense-amount');
+            const name = nameInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+
+            if (!name || isNaN(amount) || amount <= 0) {
+                return;
+            }
+
+            loggedExpenses.push({
+                id: Date.now(),
+                name: name,
+                amount: amount,
+                category: 'misc'
+            });
+
+            nameInput.value = '';
+            amountInput.value = '';
+            savePreferences();
+            renderExpenses();
+        }
+
+        function deleteExpense(id) {
+            loggedExpenses = loggedExpenses.filter(exp => exp.id !== id);
+            savePreferences();
+            renderExpenses();
+        }
+
+        function clearExpenses() {
+            loggedExpenses = [];
+            savePreferences();
+            renderExpenses();
+        }
+
+        function renderExpenses() {
+            const listContainer = document.getElementById('expense-list-container');
+            const totalDisplay = document.getElementById('ledger-total');
+
+            if (loggedExpenses.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-xs text-slate-500 py-4">No logged expenses yet. Enjoy your trip!</div>';
+                totalDisplay.textContent = '$0.00';
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            let total = 0;
+
+            loggedExpenses.forEach(exp => {
+                total += exp.amount;
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900";
+                
+                let categoryIcon = 'payments';
+                if (exp.category === 'food') categoryIcon = 'restaurant';
+                if (exp.category === 'ride') categoryIcon = 'directions_car';
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="material-icons text-xs text-slate-500">${categoryIcon}</span>
+                        <span class="text-xs font-bold text-slate-200">${exp.name}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-mono font-bold text-teal-400">$${exp.amount.toFixed(2)}</span>
+                        <button onclick="deleteExpense(${exp.id})" class="text-slate-500 hover:text-red-400 transition-colors">
+                            <span class="material-icons text-sm">delete</span>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(row);
+            });
+
+            totalDisplay.textContent = `$${total.toFixed(2)}`;
+        }
+    </script>
+</body>
+</html>
