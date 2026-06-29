@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Icons&display=swap" rel="stylesheet">
+    <!-- Leaflet.js CSS for Interactive Map Layer -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -33,6 +35,18 @@
         .wave-bar:nth-child(3) { animation-delay: 0.3s; }
         .wave-bar:nth-child(4) { animation-delay: 0.45s; }
         .wave-bar:nth-child(5) { animation-delay: 0.6s; }
+
+        /* Dark Theme custom overrides for Leaflet Popups */
+        .leaflet-popup-content-wrapper {
+            background-color: #0f172a !important; /* slate-900 */
+            color: #f1f5f9 !important; /* slate-100 */
+            border: 1px solid #334155 !important; /* slate-700 */
+            border-radius: 12px !important;
+        }
+        .leaflet-popup-tip {
+            background-color: #0f172a !important; /* slate-900 */
+            border: 1px solid #334155 !important;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-24 selection:bg-amber-500/30 selection:text-amber-200">
@@ -51,7 +65,7 @@
                 </div>
                 <!-- Interactive Actions -->
                 <div class="flex items-center gap-2">
-                    <button onclick="showGuide()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-amber-400 rounded-full p-2 active:scale-95 transition-all flex items-center justify-center shadow-lg" title="App Instructions">
+                    <button onclick="showGuide()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-amber-400 rounded-full p-2 active:scale-95 transition-all flex items-center justify-center shadow-lg" title="Need Help?">
                         <span class="material-icons text-sm">help_outline</span>
                     </button>
                     <div id="live-time-badge" class="bg-indigo-900/40 border border-indigo-500/30 px-3 py-1.5 rounded-full text-center">
@@ -91,13 +105,10 @@
                         <div class="space-y-2 text-left">
                             <h3 class="text-xs font-bold text-white flex items-center gap-1.5">How to Navigate & Get Benefits</h3>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                <strong>Dynamic Food Swapping:</strong> Adjusting to your child's rhythm? Toggle <strong class="text-teal-400">Gentle Baby Pace</strong> below. We sleep in, skip early breakfasts, start at 11:00 AM with <strong>Brunch</strong>, and transition directly to <strong>Dinner</strong>. 
+                                <strong>Manual Swapping Flow:</strong> Tap the <strong class="text-indigo-400">Switch Spot</strong> button on any timeline card, search or browse the directory, and click <strong class="text-amber-400">Swap In</strong>. You can manually choose which specific timeline slot to replace!
                             </p>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                <strong>High Energy Mode:</strong> Toggle <strong class="text-red-400">High Energy</strong> to start early at 9:00 AM with separate <strong>Breakfast</strong>, <strong>Lunch</strong>, and <strong>Dinner</strong> categories!
-                            </p>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                <strong>Switch Spot:</strong> Tap the <strong class="text-indigo-400">Switch Spot</strong> button on any eligible food or lodging event to swap it dynamically with other top choices on the fly.
+                                <strong>Gentle Baby Pace:</strong> This mode schedules comfortable, slow-paced wakeups with mid-morning **Brunch** options, while **High Energy** mode schedules active early morning starts with **Breakfast** + **Lunch**.
                             </p>
                             <div class="pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 leading-normal flex justify-between items-center">
                                 <span>Developed by <strong>CleverOps</strong></span>
@@ -141,6 +152,19 @@
                 </div>
             </div>
 
+            <!-- Interactive Map Panel -->
+            <div class="px-4">
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-3 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <span class="material-icons text-sm text-indigo-400">map</span> Embedded Interactive Route Map
+                        </span>
+                        <button onclick="recenterMap()" class="text-[10px] text-indigo-400 font-bold hover:underline">Recenter</button>
+                    </div>
+                    <div id="route-map" class="h-44 w-full rounded-xl border border-slate-800 shadow-inner z-10"></div>
+                </div>
+            </div>
+
             <!-- Dynamic Flight Spotlight (Shown during transit windows) -->
             <div id="flight-spotlight" class="mx-4 hidden bg-gradient-to-r from-sky-950 to-indigo-950 border border-sky-500/30 p-4 rounded-2xl">
                 <div class="flex items-start justify-between">
@@ -168,10 +192,46 @@
                     <span class="material-icons text-amber-400 animate-pulse">auto_awesome</span> Discovery & Mood Hub
                 </h3>
                 <p class="text-[11px] text-indigo-300 mt-1">
-                    Explore verified spots with exact distances, pricing, and ratings. Swap any slot directly below!
+                    Select any activity below and manually choose which itinerary slot to inject it into!
                 </p>
                 <div class="mt-2 text-[10px] text-slate-400">
                     Currently calculated from base: <strong id="location-anchor-text" class="text-slate-200">73 E Lake St, Chicago</strong>
+                </div>
+            </div>
+
+            <!-- Live Gemini AI Restaurant & Location Search Bar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="material-icons text-indigo-400 text-sm">search</span>
+                    <span class="text-xs font-bold text-slate-300">Live AI Location & Restaurant Finder</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-search-input" placeholder="Search sushi, taverns, burger, coffee, cafes..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder-slate-600">
+                    <button onclick="triggerAISearch()" class="px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-all">
+                        <span class="material-icons text-xs">auto_awesome</span> Search
+                    </button>
+                </div>
+                
+                <!-- Loading State indicators -->
+                <div id="ai-search-loading" class="hidden flex items-center justify-center gap-2 py-3 text-xs text-slate-400">
+                    <svg class="animate-spin h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span>Grounding Google Search Results...</span>
+                </div>
+            </div>
+
+            <!-- AI Search Results Panel -->
+            <div id="ai-results-panel" class="hidden space-y-3 border-b border-slate-800 pb-4">
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                        <span class="material-icons text-xs">travel_explore</span> AI Search Results
+                    </span>
+                    <button onclick="clearAISearchResults()" class="text-[10px] text-slate-500 hover:text-slate-300">Clear Results</button>
+                </div>
+                <div id="ai-search-results-container" class="space-y-3">
+                    <!-- Populated dynamically via AI responses -->
                 </div>
             </div>
 
@@ -343,7 +403,7 @@
             </button>
         </nav>
 
-        <!-- Technical Diagnostics Modal -->
+        <!-- Technical Diagnostics Drawer Modal -->
         <div id="tech-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end justify-center hidden">
             <div class="w-full max-w-md bg-slate-900 border-t border-indigo-500/20 rounded-t-3xl p-6 space-y-4 shadow-2xl relative">
                 <button onclick="closeTechModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-all">
@@ -361,7 +421,7 @@
                 </div>
 
                 <p class="text-xs text-slate-300 leading-relaxed">
-                    CleverOps is an elite custom solutions boutique founded by <strong>Ahad</strong>. We build blazing-fast modern software configurations to automate high-friction operational constraints.
+                    CleverOps is an elite custom solutions boutique founded by <strong>Ahad</strong>. We build modern, highly synchronized web apps to resolve complex itinerary constraints and coordinate family travels.
                 </p>
 
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
@@ -389,7 +449,7 @@
             <span id="toast-message">Custom options updated!</span>
         </div>
 
-        <!-- Dynamic Swapper Action Sheet (Modal Overlay) -->
+        <!-- Dynamic Swapper Action Sheet (Manual Target Selector Modal) -->
         <div id="swapper-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end justify-center hidden">
             <div class="w-full max-w-md bg-slate-900 border-t border-indigo-500/30 rounded-t-3xl p-6 space-y-4 shadow-2xl relative">
                 <button onclick="closeSwapperModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-all">
@@ -397,17 +457,20 @@
                 </button>
                 <div class="flex items-center gap-2">
                     <span class="material-icons text-amber-500">swap_horiz</span>
-                    <h3 class="font-bold text-base text-white">Switch Spot</h3>
+                    <h3 class="font-bold text-base text-white">Manual Itinerary Injection</h3>
                 </div>
-                <p class="text-xs text-slate-400">Choose which activity slot on your <strong class="text-slate-200" id="swapper-target-day">...</strong> schedule to replace with <strong class="text-amber-400" id="swapper-target-name">...</strong>:</p>
+                <p class="text-xs text-slate-400">Select which specific slot in your <strong class="text-slate-200" id="swapper-target-day">...</strong> schedule you want to replace with <strong class="text-amber-400" id="swapper-target-name">...</strong>:</p>
                 
-                <div class="space-y-2 mt-2 max-h-60 overflow-y-auto no-scrollbar" id="swapper-slots-list">
-                    <!-- Populated dynamically based on day and category compatibilities -->
+                <div class="space-y-2 mt-2 max-h-64 overflow-y-auto no-scrollbar" id="swapper-slots-list">
+                    <!-- Populated dynamically to list ALL active itinerary slots -->
                 </div>
             </div>
         </div>
 
     </div>
+
+    <!-- Leaflet Map Script Source -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <!-- Firebase Realtime Database Live Synchronization Layer -->
     <script type="module">
@@ -430,6 +493,34 @@
         const db = getDatabase(app);
         const dbPath = 'shared_trip_tracker_state';
 
+        // Coordinates Directory for Dynamic Map Plotting
+        const COORDS = {
+            "AUS": [30.1944, -97.6700],
+            "ORD": [41.9742, -87.9073],
+            "73ELake": [41.8856, -87.6253],
+            "ClarkLake": [41.8857, -87.6311],
+            "TheDearborn": [41.8842, -87.6291],
+            "TheGage": [41.8814, -87.6247],
+            "Wildberry": [41.8847, -87.6224],
+            "BeatrixLoop": [41.8828, -87.6293],
+            "Riverwalk": [41.8872, -87.6273],
+            "GrantPark": [41.8758, -87.6246],
+            "GoddessBaker": [41.8833, -87.6262],
+            "SienaTavern": [41.8893, -87.6299],
+            "TheCove": [42.5916, -88.4326],
+            "HarborShores": [42.5908, -88.4331],
+            "Popeyes": [42.5912, -88.4312],
+            "FlatIronPark": [42.5905, -88.4335],
+            "NextDoorPub": [42.5941, -88.4485],
+            "SimpleCafe": [42.5898, -88.4325],
+            "BakerHouse": [42.5910, -88.4355],
+            "Pier290": [42.5786, -88.5350],
+            "Oakfire": [42.5914, -88.4316],
+            "WrigleyField": [41.9484, -87.6553],
+            "JenningsHoller": [42.5822, -88.4230],
+            "GrandGeneva": [42.6015, -88.3888]
+        };
+
         const ORIGINAL_ITINERARY_DATA = {
             "Tue": {
                 name: "Tuesday, June 30",
@@ -444,6 +535,7 @@
                         title: "Airplane Window (AUS ➔ ORD)",
                         desc: "United Airlines Flight departs Austin at 3:37 PM, landing in O'Hare at 6:15 PM. Keep baby comfortable on board.",
                         isFlight: true,
+                        coords: COORDS.ORD,
                         highEnergy: {
                             act: "AUS Departure Setup",
                             details: "Prepare baby toys, standard tablets, and soothing pacifiers for takeoff."
@@ -463,6 +555,7 @@
                         },
                         title: "CTA Blue Line transit to 73 E Lake St",
                         desc: "Board the CTA Blue Line inside O'Hare terminal. Enjoy a direct, traffic-free ride with the stroller.",
+                        coords: COORDS.ClarkLake,
                         highEnergy: {
                             act: "Blue Line Elevator Stroll",
                             details: "Ride directly to Clark/Lake station. Take the elevator straight up to the street, and walk 3 flat blocks East to 73 E Lake St.",
@@ -483,6 +576,7 @@
                         },
                         title: "Upscale Lower Loop Dining",
                         desc: "Settle into the apartment and find some premium Chicago food to celebrate your first night.",
+                        coords: COORDS.TheDearborn,
                         highEnergy: {
                             act: "Dinner: The Dearborn",
                             details: "Walk just 1.5 blocks to this highly-rated upscale bistro. Exceptionally lively, fully open, stroller accessible, and famous for its Midwestern tavern pizza and fish & chips.",
@@ -507,6 +601,7 @@
                         },
                         title: "Wake up & Energize Prep",
                         desc: "Clean bottles and pack a complete stroller diaper bag for a full day out in the busy city.",
+                        coords: COORDS["73ELake"],
                         highEnergy: {
                             act: "Fast Sunrise Prep",
                             details: "Waking up early to maximize the Chicago Loop morning fresh air."
@@ -522,6 +617,7 @@
                         },
                         title: "Morning Meal Session",
                         desc: "Savor a wonderful first meal of the day right near Millennium Park.",
+                        coords: COORDS.Wildberry,
                         highEnergy: {
                             act: "Breakfast: Wildberry Pancakes & Cafe",
                             details: "Walk 1.5 blocks to Wildberry. Fuel up with an incredible signature breakfast at 9:00 AM.",
@@ -542,6 +638,7 @@
                         },
                         title: "Afternoon Loop & Riverwalk Exploration",
                         desc: "Enjoy Chicago's scenic, wide, flat walking paths right next to the river.",
+                        coords: COORDS.Riverwalk,
                         highEnergy: {
                             act: "Riverwalk Exploration & Gelato",
                             details: "Walk the lively riverwalk. Enjoy the boats passing by and grab some refreshing artisanal gelato on the way.",
@@ -562,6 +659,7 @@
                         },
                         title: "Midday Power Lunch Window",
                         desc: "Explore high-energy loop locations for a quick bite.",
+                        coords: COORDS.GoddessBaker,
                         highEnergy: {
                             act: "Goddess & The Baker Wabash",
                             details: "Snag premium panini, flatbreads, and specialty cold brew lattes on a fast walk.",
@@ -578,6 +676,7 @@
                         },
                         title: "Vibrant Fine Dining Selection",
                         desc: "Spend your final Chicago night enjoying the city's world-famous culinary scene.",
+                        coords: COORDS.SienaTavern,
                         highEnergy: {
                             act: "Vibrant Dinner: Siena Tavern",
                             details: "Head to Fabio Viviani's Siena Tavern in River North. Highly acclaimed modern Italian, spacious, fully open and operating.",
@@ -604,6 +703,7 @@
                         },
                         title: "Wakeup & Departure Fuel",
                         desc: "Prepare for your road trip northwest with a delicious morning meal.",
+                        coords: COORDS.Wildberry,
                         highEnergy: {
                             act: "Breakfast: Wildberry Pancakes",
                             details: "Fuel up with an energetic breakfast at 9:00 AM before grabbing the car from Dearborn counters.",
@@ -624,6 +724,7 @@
                         },
                         title: "The 90-Minute Drive to Lake Geneva",
                         desc: "Grab your rental car and head northwest. Minimal driving time keeps baby perfectly calm.",
+                        coords: COORDS.TheCove,
                         highEnergy: {
                             act: "Music & Highway Drive",
                             details: "Blast your favorite road trip playlist and enjoy a scenic drive."
@@ -643,6 +744,7 @@
                         },
                         title: "Unpack & Downtown Exploration",
                         desc: "Check into your hotel and get your bearings entirely on foot.",
+                        coords: COORDS.TheCove,
                         highEnergy: {
                             act: "Staying at: The Cove of Lake Geneva",
                             details: "Head straight out the hotel door. Grab a lakeside lunch on the spacious deck at Popeye's Rotisserie.",
@@ -664,6 +766,7 @@
                         },
                         title: "Lakefront Celebration Hours",
                         desc: "Enjoy the bustling town vibes next to the water.",
+                        coords: COORDS.FlatIronPark,
                         highEnergy: {
                             act: "Thursday Concert in Flat Iron Park",
                             details: "Check out Concerts in Flat Iron Park. Grab some takeout, spread a blanket on the grass, and enjoy.",
@@ -690,6 +793,7 @@
                         },
                         title: "Wisconsin Lakeview Dining",
                         desc: "Experience local culinary highlights right next to the water.",
+                        coords: COORDS.SimpleCafe,
                         highEnergy: {
                             act: "Lakeside Breakfast: Simple Cafe",
                             details: "Savor local farm-to-table breakfast scramble at Simple Cafe starting at 9:00 AM, then stroll along the Riviera Beach boardwalk.",
@@ -710,6 +814,7 @@
                         },
                         title: "Beat the Midday Sun",
                         desc: "Find cooling air-conditioned options during the peak heat.",
+                        coords: COORDS.TheCove,
                         highEnergy: {
                             act: "Main Street Boutique Walk",
                             details: "Explore the air-conditioned boutique shops and cafes on Main Street."
@@ -730,6 +835,7 @@
                         },
                         title: "Waterfront Dinner Feast",
                         desc: "Enjoy a spacious, stroller-friendly lakeside dining experience.",
+                        coords: COORDS.Oakfire,
                         highEnergy: {
                             act: "Vibrant Waterfront Pizza: Oakfire",
                             details: "Dine at Oakfire. Enjoy magnificent balconies and freshly baked wood-fired pizza overlooking the lake.",
@@ -750,6 +856,7 @@
                         },
                         title: "Waterfront Fireworks (9:15 PM)",
                         desc: "Find a prime spot to watch spectacular holiday fireworks over the lake.",
+                        coords: COORDS.FlatIronPark,
                         highEnergy: {
                             act: "Riviera Docks Viewpoint",
                             details: "Join the bustling crowd at Riviera waterfront to see colorful lights reflect off the lake.",
@@ -774,7 +881,8 @@
                             low: { start: 0, end: 9.25 }
                         },
                         title: "Final Sleep-In & Pack Up",
-                        desc: "Take your time waking up at the apartment. Pack your bags for the airport departure."
+                        desc: "Take your time waking up at the apartment. Pack your bags for the airport departure.",
+                        coords: COORDS["73ELake"]
                     },
                     {
                         id: "sat-slot-2",
@@ -785,6 +893,7 @@
                         },
                         title: "O'Hare Departure Transit",
                         desc: "Walk to Clark/Lake station, board the Blue Line back to ORD by 9:30 AM to allow plenty of buffer for holiday travel security.",
+                        coords: COORDS.ClarkLake,
                         link: "https://www.google.com/maps/search/?api=1&query=OHare+Airport+Chicago+IL"
                     },
                     {
@@ -796,6 +905,7 @@
                         },
                         title: "Homeward Flight (ORD ➔ AUS)",
                         desc: "Flight departs Chicago at 11:47 AM, landing back in Austin in the afternoon. Settle in and relax.",
+                        coords: COORDS.ORD,
                         isFlight: true
                     }
                 ]
@@ -814,20 +924,8 @@
                 timeText: "Open 7:00 AM - 2:00 PM Daily",
                 desc: "Crowd favorite featuring signature berry-loaded pancakes, fresh-squeezed citrus blends, and cast-iron breakfast skillets.",
                 link: "https://www.google.com/maps/search/?api=1&query=Wildberry+Acai+Cafe+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "yolk-marina",
-                title: "Yolk - Marina City",
-                category: "breakfast",
-                location: "River North, Chicago",
-                distance: "0.4 mi (8 min walk from 73 E Lake)",
-                rating: "⭐ 4.5",
-                price: "$$",
-                timeText: "Open 7:00 AM - 3:00 PM Daily",
-                desc: "Bright, cheery setting offering five-egg scrambles, red velvet French toast, and strong espresso options.",
-                link: "https://www.google.com/maps/search/?api=1&query=Yolk+Marina+City+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.Wildberry
             },
             {
                 id: "goddess-baker-loop",
@@ -840,7 +938,8 @@
                 timeText: "Open 7:00 AM - 4:00 PM Daily",
                 desc: "Exceptional flat white coffees, avocado toasts, and signature rainbow cakes. Ultra-convenient walking proximity.",
                 link: "https://www.google.com/maps/search/?api=1&query=Goddess+and+the+Baker+Loop+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.GoddessBaker
             },
             {
                 id: "beatrix-loop-brunch",
@@ -853,7 +952,8 @@
                 timeText: "Brunch Daily 8:00 AM - 3:00 PM",
                 desc: "Incredibly spacious, quiet, stroller-friendly corridors. Acclaimed for spiced honey lattes and fresh gluten-free pastries.",
                 link: "https://www.google.com/maps/search/?api=1&query=Beatrix+Loop+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.BeatrixLoop
             },
             {
                 id: "the-gage-brunch",
@@ -866,20 +966,8 @@
                 timeText: "Brunch from 11:00 AM on Weekdays",
                 desc: "An upscale culinary classic overlooking Millennium Park. Wide flat entries, superb Irish breakfasts, and rich wood booths.",
                 link: "https://www.google.com/maps/search/?api=1&query=The+Gage+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "cindy-rooftop-brunch",
-                title: "Cindy's Rooftop Experience",
-                category: "brunch",
-                location: "Michigan Ave, Chicago",
-                distance: "0.3 mi (6 min walk from 73 E Lake)",
-                rating: "⭐ 4.4",
-                price: "$$$$",
-                timeText: "Brunch from 11:00 AM",
-                desc: "Elite penthouse dining room with breathtaking, unobstructed views of Millennium Park and Lake Michigan.",
-                link: "https://www.google.com/maps/search/?api=1&query=Cindys+Rooftop+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.TheGage
             },
             {
                 id: "riverwalk-cafe",
@@ -892,23 +980,11 @@
                 timeText: "Open 11:00 AM - 9:00 PM",
                 desc: "Unbeatable outdoor dining right on the river walk way. Great for gourmet sandwiches, tacos, and custom iced beverages.",
                 link: "https://www.google.com/maps/search/?api=1&query=Riverwalk+Cafe+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.Riverwalk
             },
             {
-                id: "purple-pig-lunch",
-                title: "The Purple Pig",
-                category: "lunch",
-                location: "Michigan Ave, Chicago",
-                distance: "0.3 mi (6 min walk from 73 E Lake)",
-                rating: "⭐ 4.6",
-                price: "$$$",
-                timeText: "Open 11:30 AM - 10:00 PM Daily",
-                desc: "World-class Mediterranean shareable plates, house-cured charcuterie, and cheeses in a stylish, spacious room.",
-                link: "https://www.google.com/maps/search/?api=1&query=The+Purple+Pig+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "chicago-dinner-cruise",
+                id: "chicago-dinner-drive",
                 title: "Chicago River Architecture Sunset Dinner Drive",
                 category: "dinner",
                 location: "Riverwalk Docks, Chicago",
@@ -918,7 +994,8 @@
                 timeText: "Boarding 6:00 PM | Drive 6:30 PM - 9:00 PM",
                 desc: "An elite 2.5-hour architecture and dining drive. Features a delicious 3-course plated menu, a climate-controlled glass atrium, and wide, flat outer decks. Highly stroller accessible and incredibly smooth sailing.",
                 link: "https://www.google.com/maps/search/?api=1&query=Chicago+River+Dinner+Cruise+Docks+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.Riverwalk
             },
             {
                 id: "the-dearborn-chicago",
@@ -931,7 +1008,8 @@
                 timeText: "Open 11:00 AM - 10:00 PM Daily",
                 desc: "Exceptional Midwest tavern bistro. Beautiful leather booths, fully stroller accessible, high ceilings. Famed tavern-style pizzas and fresh seafood.",
                 link: "https://www.google.com/maps/search/?api=1&query=The+Dearborn+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.TheDearborn
             },
             {
                 id: "siena-tavern-chicago",
@@ -944,72 +1022,8 @@
                 timeText: "Dinner 5:00 PM - 11:00 PM",
                 desc: "Vibrant upscale Italian venue with truffled mushroom gnocchi and wood-fired pizzas. Highly accommodating with spacious layout.",
                 link: "https://www.google.com/maps/search/?api=1&query=Siena+Tavern+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "rpm-steak-chicago",
-                title: "RPM Steak [Upscale Modern Steak]",
-                category: "dinner",
-                location: "River North, Chicago",
-                distance: "0.6 mi (12 min walk / 4 min ride)",
-                rating: "⭐ 4.7",
-                price: "$$$$",
-                timeText: "Dinner 4:30 PM - 11:00 PM",
-                desc: "Vastly spacious, sleek, and highly-rated steakhouse. Excellent alternative for prime beef and exceptional seafood towers.",
-                link: "https://www.google.com/maps/search/?api=1&query=RPM+Steak+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "chicago-cut-steak",
-                title: "Chicago Cut Steakhouse [Waterfront Steak]",
-                category: "dinner",
-                location: "LaSalle Dr, Chicago",
-                distance: "0.6 mi (12 min walk)",
-                rating: "⭐ 4.6",
-                price: "$$$$",
-                timeText: "Dinner 4:30 PM - 10:30 PM",
-                desc: "Premier outdoor riverside terrace with outstanding city skyline views and prime dry-aged steak selections.",
-                link: "https://www.google.com/maps/search/?api=1&query=Chicago+Cut+Steakhouse+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "quartino-chicago",
-                title: "Quartino Ristorante [Italian Tapas]",
-                category: "dinner",
-                location: "State St, Chicago",
-                distance: "0.6 mi (12 min walk)",
-                rating: "⭐ 4.6",
-                price: "$$",
-                timeText: "Open 11:00 AM - 11:00 PM",
-                desc: "Extremely popular, bustling multi-level spot serving small Italian shareable plates, house-made pastas, and affordable wines.",
-                link: "https://www.google.com/maps/search/?api=1&query=Quartino+Ristorante+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "sunda-chicago",
-                title: "Sunda [Sushi & Asian Fusion]",
-                category: "dinner",
-                location: "Illinois St, Chicago",
-                distance: "0.7 mi (14 min walk / 6 min ride)",
-                rating: "⭐ 4.5",
-                price: "$$$",
-                timeText: "Open 5:00 PM - 10:00 PM Daily",
-                desc: "Stylish, high-energy dining room offering innovative sushi rolls, roasted pork belly, and creative East Asian fusion items.",
-                link: "https://www.google.com/maps/search/?api=1&query=Sunda+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
-            },
-            {
-                id: "mercat-planxa",
-                title: "Mercat a la Planxa [Modern Spanish]",
-                category: "dinner",
-                location: "Michigan Ave (South Loop)",
-                distance: "1.0 mi (20 min walk / 7 min ride)",
-                rating: "⭐ 4.4",
-                price: "$$$",
-                timeText: "Dinner 5:00 PM - 10:00 PM",
-                desc: "Spacious Catalan dining room with vibrant tapestries, savory paellas, and premium sangrias near Grant Park.",
-                link: "https://www.google.com/maps/search/?api=1&query=Mercat+a+la+Planxa+Chicago+IL",
-                applicableDays: ["Tue", "Wed", "Sat"]
+                applicableDays: ["Tue", "Wed", "Sat"],
+                coords: COORDS.SienaTavern
             },
             {
                 id: "simple-cafe-lg",
@@ -1022,20 +1036,8 @@
                 timeText: "Open 6:00 AM - 3:00 PM Daily",
                 desc: "Wisconsin local farm-to-table eggs, bakery treats, and outstanding specialty coffee options.",
                 link: "https://www.google.com/maps/search/?api=1&query=Simple+Cafe+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "jonis-diner-lg",
-                title: "Joni's Diner",
-                category: "breakfast",
-                location: "Wells St, Lake Geneva",
-                distance: "0.6 mi (12 min walk)",
-                rating: "⭐ 4.4",
-                price: "$",
-                timeText: "Open 6:30 AM - 2:00 PM Daily",
-                desc: "Cozy, classic retro diner serving generous pancakes, thick bacon, and friendly local flavor.",
-                link: "https://www.google.com/maps/search/?api=1&query=Jonis+Diner+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.SimpleCafe
             },
             {
                 id: "baker-house-lg",
@@ -1048,20 +1050,8 @@
                 timeText: "Brunch from 11:00 AM Weekend Days",
                 desc: "Historic shoreline Victorian mansion. Splendid outdoor garden patio with tranquil shade trees overlooking the lake.",
                 link: "https://www.google.com/maps/search/?api=1&query=Baker+House+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "grandview-restaurant-lg",
-                title: "The Grandview Restaurant",
-                category: "brunch",
-                location: "Geneva National, WI",
-                distance: "3.8 mi (7 min drive from Hotels)",
-                rating: "⭐ 4.4",
-                price: "$$$",
-                timeText: "Brunch Daily 10:00 AM - 2:30 PM",
-                desc: "Panoramic lake vistas. Spacious, luxurious layout with premium waffle and mocktail menus.",
-                link: "https://www.google.com/maps/search/?api=1&query=The+Grandview+Restaurant+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.BakerHouse
             },
             {
                 id: "popeyes-lg",
@@ -1074,20 +1064,8 @@
                 timeText: "Open 11:30 AM - 9:00 PM",
                 desc: "Casual, legendary lakeside spot famed for its outdoor rotisserie pit, chicken baskets, and family-friendly patio space.",
                 link: "https://www.google.com/maps/search/?api=1&query=Popeyes+on+Lake+Geneva+Wrigley+Dr+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "geneva-dinner-drive",
-                title: "Lake Geneva Sunset Dinner Drive (Riviera Docks)",
-                category: "dinner",
-                location: "Riviera Docks, Lake Geneva",
-                distance: "0.1 mi (2 min walk from Harbor Shores)",
-                rating: "⭐ 4.7",
-                price: "$$$$",
-                timeText: "Boarding 5:45 PM | Drive 6:00 PM - 8:30 PM",
-                desc: "Board the grand double-decker boat for a relaxing sunset drive featuring a full plated dinner service. Perfect for both high energy or gentle baby pace due to calm waters, enclosed dining salons, and beautiful shoreline views.",
-                link: "https://www.google.com/maps/search/?api=1&query=Riviera+Docks+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.Popeyes
             },
             {
                 id: "oakfire-lake-geneva",
@@ -1100,7 +1078,8 @@
                 timeText: "Open 11:00 AM - 10:00 PM",
                 desc: "Authentic wood-fired Neapolitan pizza, elevated outdoor dining terraces with splendid vistas across Riviera beach.",
                 link: "https://www.google.com/maps/search/?api=1&query=Oakfire+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.Oakfire
             },
             {
                 id: "pier-290-lake",
@@ -1113,7 +1092,8 @@
                 timeText: "Open 11:00 AM - 10:00 PM",
                 desc: "Outstanding sandy shoreline setting with cozy campfire rings, dynamic flat paths for stroller navigation.",
                 link: "https://www.google.com/maps/search/?api=1&query=Pier+290+Williams+Bay+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.Pier290
             },
             {
                 id: "next-door-pub",
@@ -1126,7 +1106,8 @@
                 timeText: "Open 11:00 AM - 10:00 PM Daily",
                 desc: "Warm local pub environment. Family-sized pizzas, sandwiches, and large booths that easily accommodate strollers.",
                 link: "https://www.google.com/maps/search/?api=1&query=The+Next+Door+Pub+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.NextDoorPub
             },
             {
                 id: "cove-hotel-lg",
@@ -1138,8 +1119,9 @@
                 price: "$$$",
                 timeText: "Check-in 4:00 PM",
                 desc: "Spacious multi-bedroom suites, family-friendly indoor swimming pools, and steps from the downtown shops.",
-                link: "https://www.google.com/maps/search/?api=1&query=The+Cove+of+Lake+Geneva+111+Center+St+Lake+Geneva+WI+53147",
-                applicableDays: ["Thu", "Fri"]
+                link: "https://www.google.com/maps/search/?api=1&query=The+Cove of Lake Geneva 111 Center St Lake Geneva WI 53147",
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.TheCove
             },
             {
                 id: "harbor-shores-lg",
@@ -1151,8 +1133,9 @@
                 price: "$$$",
                 timeText: "Check-in 4:00 PM",
                 desc: "Lakeside views with sliding balconies, flat strolling paths, and direct proximity to Riviera pier boat tours.",
-                link: "https://www.google.com/maps/search/?api=1&query=Harbor+Shores+on+Lake+Geneva+300+Wrigley+Dr+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
+                link: "https://www.google.com/maps/search/?api=1&query=Harbor Shores on Lake Geneva 300 Wrigley Dr Lake Geneva WI",
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.HarborShores
             },
             {
                 id: "grand-geneva-resort",
@@ -1164,73 +1147,9 @@
                 price: "$$$$",
                 timeText: "Check-in 4:00 PM",
                 desc: "Luxury countryside resort featuring private villas, upscale dining, extensive indoor waterparks, and spacious lawns.",
-                link: "https://www.google.com/maps/search/?api=1&query=Grand+Geneva+Resort+Lake+Geneva+WI",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "abbey-resort-lg",
-                title: "The Abbey Resort & Spa",
-                category: "hotel",
-                location: "Fontana-on-Geneva-Lake, WI",
-                distance: "10.2 mi (15 min drive)",
-                rating: "⭐ 4.4",
-                price: "$$$",
-                timeText: "Check-in 4:00 PM",
-                desc: "Magnificent marina setting with full-service indoor pools, spacious family units, and lush green strollable grounds.",
-                link: "https://www.google.com/maps/search/?api=1&query=The+Abbey+Resort+Fontana+WI",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "cubs-padres-event",
-                title: "Chicago Cubs vs San Diego Padres",
-                category: "events",
-                location: "Wrigley Field, Chicago",
-                distance: "5.5 mi (CTA Red Line Direct)",
-                rating: "⭐ 4.8",
-                price: "$$$",
-                timeText: "Tue Jun 30 & Wed Jul 1 Game",
-                desc: "High energy Wrigleyville baseball atmosphere. Highly recommended to carry toddler hearing protection if attending.",
-                link: "https://www.google.com/maps/search/?api=1&query=Wrigley+Field+Chicago+IL",
-                applicableDays: ["Tue", "Wed"]
-            },
-            {
-                id: "wave-deadhead-fest",
-                title: "Wave That Flag Tribute Festival",
-                category: "events",
-                location: "Jennings Holler, WI",
-                distance: "4.5 mi (10 min drive)",
-                rating: "⭐ 4.5",
-                price: "$$",
-                timeText: "Thu Jul 2 - Sat Jul 4 Series",
-                desc: "Laid-back, spacious outdoor gathering with live Grateful Dead tribute bands. Cozy and stroller-friendly grass lawns.",
-                link: "https://www.visitlakegeneva.com/events/",
-                applicableDays: ["Thu", "Fri"]
-            },
-            {
-                id: "grand-geneva-fireworks-live",
-                title: "Grand Geneva Resort Independence Show",
-                category: "events",
-                location: "Grand Geneva, WI",
-                distance: "3.2 mi (8 min drive)",
-                rating: "⭐ 4.6",
-                price: "Free",
-                timeText: "Friday July 3 (Dusk / ~9:15 PM)",
-                desc: "Spacious lawns and open fields. Excellent visibility directly from park locations with minimal toddler crowding.",
-                link: "https://www.google.com/maps/search/?api=1&query=Grand+Geneva+Resort+Lake+Geneva+WI",
-                applicableDays: ["Fri"]
-            },
-            {
-                id: "liberty-lake-drone-live",
-                title: "Liberty on the Lake American Drone Show",
-                category: "events",
-                location: "Flat Iron Park, Lake Geneva",
-                distance: "0.2 mi (4 min walk)",
-                rating: "⭐ 4.7",
-                price: "Free",
-                timeText: "Saturday July 4 (9:00 PM)",
-                desc: "American celebration custom quiet drone light show. Fully silent and outstanding for sensitive baby ears.",
-                link: "https://www.google.com/maps/search/?api=1&query=Flat+Iron+Park+Lake+Geneva+WI",
-                applicableDays: ["Sat"]
+                link: "https://www.google.com/maps/search/?api=1&query=Grand Geneva Resort Lake Geneva WI",
+                applicableDays: ["Thu", "Fri"],
+                coords: COORDS.GrandGeneva
             }
         ];
 
@@ -1255,7 +1174,11 @@
         let isPlayingNoise = false;
         let activeNoiseType = null;
 
-        // Core Live Sync Firebase Realtime Database Engine
+        // Leaflet Map Global States
+        let routeMap = null;
+        let mapMarkers = [];
+        let routePolyline = null;
+
         function savePreferences() {
             const syncPayload = {
                 selectedDay,
@@ -1270,7 +1193,6 @@
                 .catch(err => console.error("Firebase Sync write failed:", err));
         }
 
-        // Live Event Synchronization Listener
         onValue(ref(db, dbPath), (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -1286,21 +1208,309 @@
                     if (diagSwaps) diagSwaps.textContent = customSwapsCount;
                 }
 
-                // Render dynamic views instantly for all screens
+                // Render dynamic updates on screen
                 updateTimeline();
                 updateStrollerAdvice();
                 renderExpenses();
                 renderChecklist();
                 renderDiscoverTab();
+                updateMapLayer();
             } else {
-                // Initialize DB with default states if empty
                 savePreferences();
             }
         }, (error) => {
             console.error("Firebase snapshot reading error:", error);
         });
 
-        // Diagnostic Drawer Actions
+        function initMap() {
+            try {
+                if (routeMap) return;
+                // Center map base at Chicago Loop initially
+                routeMap = L.map('route-map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView(COORDS["73ELake"], 13);
+
+                // Load CartoDB Dark Matter tiles matching sleek slate interface
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 20
+                }).addTo(routeMap);
+
+                // Re-draw initial elements
+                updateMapLayer();
+            } catch (err) {
+                console.error("Map initialization failed:", err);
+            }
+        }
+
+        function updateMapLayer() {
+            if (!routeMap) return;
+
+            // Clear old layers/markers
+            mapMarkers.forEach(m => routeMap.removeLayer(m));
+            mapMarkers = [];
+            if (routePolyline) {
+                routeMap.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+
+            const dayData = ITINERARY_DATA[selectedDay];
+            if (!dayData || !dayData.slots) return;
+
+            let points = [];
+
+            dayData.slots.forEach((slot, index) => {
+                let coords = slot.coords;
+                // Fallback coordinates resolver
+                if (!coords) {
+                    const details = energyLevel === 'high' ? slot.highEnergy : slot.lowEnergy;
+                    if (details && details.link) {
+                        if (details.link.includes("TheDearborn")) coords = COORDS.TheDearborn;
+                        else if (details.link.includes("TheGage")) coords = COORDS.TheGage;
+                        else if (details.link.includes("Wildberry")) coords = COORDS.Wildberry;
+                        else if (details.link.includes("Beatrix")) coords = COORDS.BeatrixLoop;
+                        else if (details.link.includes("Riverwalk")) coords = COORDS.Riverwalk;
+                        else if (details.link.includes("Grant+Park")) coords = COORDS.GrantPark;
+                        else if (details.link.includes("The+Cove")) coords = COORDS.TheCove;
+                        else if (details.link.includes("Harbor+Shores")) coords = COORDS.HarborShores;
+                        else if (details.link.includes("Popeye")) coords = COORDS.Popeyes;
+                        else if (details.link.includes("Oakfire")) coords = COORDS.Oakfire;
+                        else if (details.link.includes("Pier+290")) coords = COORDS.Pier290;
+                        else if (details.link.includes("Next+Door")) coords = COORDS.NextDoorPub;
+                        else if (details.link.includes("Simple+Cafe")) coords = COORDS.SimpleCafe;
+                        else if (details.link.includes("Baker+House")) coords = COORDS.BakerHouse;
+                    }
+                }
+
+                if (coords && coords.length === 2) {
+                    points.push(coords);
+
+                    // Add customized marker pin
+                    const markerColor = slot.isFlight ? '#38bdf8' : (slot.isCustomSwapped ? '#a855f7' : '#f59e0b');
+                    const markerHtml = `
+                        <div style="background-color: ${markerColor}; width: 14px; height: 14px; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5);"></div>
+                    `;
+                    const customIcon = L.divIcon({
+                        html: markerHtml,
+                        className: 'custom-leaflet-marker',
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                    });
+
+                    const marker = L.marker(coords, { icon: customIcon })
+                        .bindPopup(`<div class="text-xs space-y-1">
+                            <strong class="text-white block">${slot.title}</strong>
+                            <span class="text-slate-400 block text-[10px]">${slot.desc.substring(0, 50)}...</span>
+                        </div>`)
+                        .addTo(routeMap);
+
+                    mapMarkers.push(marker);
+                }
+            });
+
+            if (points.length > 0) {
+                // Connect points with a sleek dashed polyline path
+                routePolyline = L.polyline(points, {
+                    color: '#6366f1', // indigo-500
+                    weight: 3,
+                    dashArray: '6, 6',
+                    opacity: 0.8
+                }).addTo(routeMap);
+
+                // Frame active boundaries
+                const bounds = L.latLngBounds(points);
+                routeMap.fitBounds(bounds, { padding: [25, 25] });
+            }
+        }
+
+        function recenterMap() {
+            if (!routeMap) return;
+            const points = mapMarkers.map(m => m.getLatLng());
+            if (points.length > 0) {
+                routeMap.fitBounds(L.latLngBounds(points), { padding: [20, 20] });
+            } else {
+                const centerCoords = (selectedDay === 'Thu' || selectedDay === 'Fri') ? COORDS.TheCove : COORDS["73ELake"];
+                routeMap.setView(centerCoords, 13);
+            }
+        }
+
+        async function triggerAISearch() {
+            const searchInput = document.getElementById('ai-search-input');
+            const queryText = searchInput.value.trim();
+            if (!queryText) return;
+
+            const loader = document.getElementById('ai-search-loading');
+            const resultsPanel = document.getElementById('ai-results-panel');
+            const resultsContainer = document.getElementById('ai-search-results-container');
+
+            loader.classList.remove('hidden');
+            resultsPanel.classList.remove('hidden');
+            resultsContainer.innerHTML = '';
+
+            const isLakeGeneva = (selectedDay === 'Thu' || selectedDay === 'Fri');
+            const currentLocationName = isLakeGeneva ? "Lake Geneva, Wisconsin" : "Chicago Loop, Illinois";
+            const baseAnchorCoords = isLakeGeneva ? COORDS.TheCove : COORDS["73ELake"];
+
+            // Building precise Prompt and structural constraints
+            const systemPrompt = `You are an elite, highly precise travel assistant and food spot finder. The user wants to search for: "${queryText}" near ${currentLocationName}.
+            
+            IMPORTANT:
+            - Ground your search in real-world operating spots using Google Search. Return only currently open and fully operating spots.
+            - Ensure coordinates are highly accurate real values in the format [lat, lng].
+            - Return up to 4 options.
+            - Your output MUST be a strict raw JSON array of objects fitting this schema exactly. Do not output markdown code blocks (like \`\`\`json), do not include any backticks, or other prefix text. Just return the JSON.
+            
+            Schema of each object:
+            {
+              "id": "string",
+              "title": "string",
+              "category": "breakfast" | "brunch" | "lunch" | "dinner" | "hotel" | "events",
+              "location": "string (address)",
+              "distance": "string (e.g. 0.3 mi / 6 min walk)",
+              "rating": "string (e.g. ⭐ 4.7)",
+              "price": "string (e.g. $$)",
+              "timeText": "string (operating hours)",
+              "desc": "string (short descriptions covering food quality and stroller accessibility)",
+              "link": "string (Google Maps lookup URL)",
+              "coords": [latitude, longitude]
+            }`;
+
+            const userPrompt = `Search for "${queryText}" near coordinates [${baseAnchorCoords[0]}, ${baseAnchorCoords[1]}] in ${currentLocationName}. Provide structural JSON responses.`;
+
+            // Call standard Canvas endpoint
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        tools: [{ "google_search": {} }],
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
+                        },
+                        generationConfig: {
+                            responseMimeType: "application/json"
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (textResponse) {
+                    // Extract citations/attributions from search metadata if present
+                    let attributions = [];
+                    const metadata = result.candidates?.[0]?.groundingMetadata;
+                    if (metadata && metadata.groundingAttributions) {
+                        attributions = metadata.groundingAttributions
+                            .map(att => att.web?.title)
+                            .filter(Boolean);
+                    }
+
+                    // Clean any unintended formatting out of LLM response
+                    let cleanJson = textResponse.trim();
+                    if (cleanJson.startsWith("```json")) {
+                        cleanJson = cleanJson.substring(7);
+                    }
+                    if (cleanJson.startsWith("```")) {
+                        cleanJson = cleanJson.substring(3);
+                    }
+                    if (cleanJson.endsWith("```")) {
+                        cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+                    }
+
+                    const parsedData = JSON.parse(cleanJson.trim());
+
+                    if (Array.isArray(parsedData) && parsedData.length > 0) {
+                        renderAISearchResults(parsedData, attributions);
+                    } else {
+                        resultsContainer.innerHTML = `<div class="text-xs text-slate-500 py-3 text-center">No locations returned matching "${queryText}" near this area. Try another term.</div>`;
+                    }
+                } else {
+                    resultsContainer.innerHTML = `<div class="text-xs text-slate-500 py-3 text-center">No results returned. AI model did not produce coordinates.</div>`;
+                }
+            } catch (err) {
+                console.error("AI Search API Failed:", err);
+                resultsContainer.innerHTML = `<div class="text-xs text-red-400 py-3 text-center">Failed to complete live Google Search. Please verify connection and try again.</div>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function renderAISearchResults(options, attributions) {
+            const container = document.getElementById('ai-search-results-container');
+            container.innerHTML = '';
+
+            options.forEach(option => {
+                // Ensure generated option has correct geolocating coords
+                if (!option.coords || option.coords.length !== 2) {
+                    option.coords = (selectedDay === 'Thu' || selectedDay === 'Fri') ? COORDS.TheCove : COORDS["73ELake"];
+                }
+
+                // Append into DISCOVERY_POOL so user can utilize it
+                if (!DISCOVERY_POOL.some(item => item.id === option.id)) {
+                    DISCOVERY_POOL.push(option);
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border-2 border-indigo-500/30 p-3.5 rounded-2xl text-left space-y-2 hover:border-indigo-500 transition-all";
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="bg-indigo-500/20 text-indigo-300 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">AI Found (${option.category})</span>
+                            <h4 class="text-xs font-bold text-white mt-1">${option.title}</h4>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-amber-400 font-bold text-xs">${option.rating}</span>
+                            <span class="text-emerald-400 font-mono text-xs font-bold">${option.price}</span>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-normal">${option.desc}</p>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-800/80">
+                        <span class="text-[9px] text-indigo-300 flex items-center gap-1">
+                            <span class="material-icons text-[11px]">place</span> ${option.distance}
+                        </span>
+                        <div class="flex gap-2">
+                            <button onclick="zoomToAIResult([${option.coords[0]}, ${option.coords[1]}], '${option.title}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[9px] font-bold text-slate-300 flex items-center gap-0.5">
+                                <span class="material-icons text-[10px]">location_on</span> Map
+                            </button>
+                            <button onclick="triggerSwapSelection('${option.id}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-[9px] rounded-lg transition-all flex items-center gap-0.5">
+                                <span class="material-icons text-[10px]">swap_horiz</span> Switch Spot
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            if (attributions && attributions.length > 0) {
+                const attDiv = document.createElement('div');
+                attDiv.className = "text-[8px] text-slate-600 text-right pr-2 italic";
+                attDiv.textContent = `Sources: ${attributions.slice(0, 3).join(', ')}`;
+                container.appendChild(attDiv);
+            }
+        }
+
+        function zoomToAIResult(coords, title) {
+            if (!routeMap) return;
+            switchTab('itinerary');
+            routeMap.setView(coords, 16);
+            L.popup()
+                .setLatLng(coords)
+                .setContent(`<strong class="text-xs text-white">${title}</strong>`)
+                .openOn(routeMap);
+        }
+
+        function clearAISearchResults() {
+            document.getElementById('ai-search-input').value = '';
+            document.getElementById('ai-search-results-container').innerHTML = '';
+            document.getElementById('ai-results-panel').classList.add('hidden');
+        }
+
         function openTechModal() {
             document.getElementById('tech-modal').classList.remove('hidden');
         }
@@ -1381,6 +1591,14 @@
 
             if (tabId === 'discover') {
                 renderDiscoverTab();
+            }
+
+            // Invalidate Map size to handle sizing within hidden panels
+            if (tabId === 'itinerary' && routeMap) {
+                setTimeout(() => {
+                    routeMap.invalidateSize();
+                    recenterMap();
+                }, 100);
             }
         }
 
@@ -1690,7 +1908,7 @@
 
             const filtered = DISCOVERY_POOL.filter(item => {
                 const matchesMood = (item.category === discoverActiveMood);
-                const matchesDay = item.applicableDays.includes(selectedDay);
+                const matchesDay = item.applicableDays ? item.applicableDays.includes(selectedDay) : true;
                 return matchesMood && matchesDay;
             });
 
@@ -1699,7 +1917,7 @@
                     <div class="text-center py-8 bg-slate-900/40 border border-slate-800/80 rounded-2xl">
                         <span class="material-icons text-slate-600 text-3xl">restaurant_menu</span>
                         <p class="text-xs text-slate-500 mt-2">No custom ${discoverActiveMood} options matched for this segment.</p>
-                        <p class="text-[10px] text-slate-600 mt-1">Try toggling another category above!</p>
+                        <p class="text-[10px] text-slate-600 mt-1">Try searching or toggling another category above!</p>
                     </div>
                 `;
                 return;
@@ -1740,7 +1958,7 @@
                             <h4 class="text-sm font-bold text-white">${option.title}</h4>
                             <div class="flex items-center gap-1.5 text-xs text-slate-300">
                                 <span class="text-amber-400 font-bold">${option.rating}</span>
-                                <span class="text-emerald-400 font-mono font-bold">${option.price}</span>
+                                <span class="text-emerald-400 font-mono text-xs font-bold">${option.price}</span>
                             </div>
                         </div>
                         <span class="text-[10px] text-amber-500 font-mono block mt-0.5">${option.timeText}</span>
@@ -1754,7 +1972,7 @@
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] text-slate-500">${option.location}</span>
                             <button onclick="triggerSwapSelection('${option.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-[10px] rounded-xl transition-all flex items-center gap-1 shadow-lg shadow-indigo-600/10">
-                                <span class="material-icons text-[11px]">swap_horiz</span> Swap In
+                                <span class="material-icons text-[11px]">swap_horiz</span> Switch Spot
                             </button>
                         </div>
                     </div>
@@ -1794,7 +2012,7 @@
             }
 
             switchTab('discover');
-            triggerToast(`Select alternative ${discoverActiveMood} to swap into schedule!`);
+            triggerToast(`Select alternative ${discoverActiveMood} and choose where to inject it!`);
         }
 
         function triggerSwapSelection(optionId) {
@@ -1809,32 +2027,50 @@
             slotsList.innerHTML = '';
 
             const daySlots = ITINERARY_DATA[selectedDay].slots;
+            
+            // Loop and render EVERY itinerary slot on the selected day so the user has full manual control to choose where to put it
             daySlots.forEach(slot => {
-                let isCompatible = false;
-                if (slot.canSwap) {
-                    if (option.category === 'hotel' && slot.swapCategory === 'hotel') isCompatible = true;
-                    if (option.category === 'dinner' && slot.swapCategory === 'dinner') isCompatible = true;
-                    if (option.category === 'lunch' && slot.swapCategory === 'lunch') isCompatible = true;
-                    if (option.category === 'breakfast' && slot.swapCategory === 'breakfast-brunch') isCompatible = true;
-                    if (option.category === 'brunch' && slot.swapCategory === 'breakfast-brunch') isCompatible = true;
-                    if (option.category === 'events' && (slot.swapCategory === 'dinner' || slot.swapCategory === 'breakfast-brunch')) isCompatible = true;
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3.5 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500 hover:bg-slate-900/50 transition-all flex flex-col gap-1 active:scale-98 mb-2 group";
+                btn.onclick = () => confirmSwapping(slot.id);
+                
+                // Fetch adjusted times for display
+                let startSetting = slot.startHour;
+                let endSetting = slot.endHour;
+                if (slot.energyTimes && slot.energyTimes[energyLevel]) {
+                    startSetting = slot.energyTimes[energyLevel].start;
+                    endSetting = slot.energyTimes[energyLevel].end;
                 }
+                let adjustedStart = startSetting + getOffsetHours();
+                let adjustedEnd = endSetting + getOffsetHours();
+                if (adjustedStart >= 24) adjustedStart -= 24;
+                if (adjustedEnd >= 24) adjustedEnd -= 24;
 
-                if (isCompatible) {
-                    const btn = document.createElement('button');
-                    btn.className = "w-full text-left p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500/50 transition-all flex flex-col gap-0.5 active:scale-98 mb-2";
-                    btn.onclick = () => confirmSwapping(slot.id);
-                    btn.innerHTML = `
-                        <span class="text-[10px] font-mono text-amber-500 font-bold">${slot.title}</span>
-                        <span class="text-xs text-slate-300 font-bold">Replace: ${slot.title}</span>
-                        <span class="text-[10px] text-slate-500 truncate mt-0.5">${slot.desc}</span>
-                    `;
-                    slotsList.appendChild(btn);
-                }
+                const formatTime = (decimal) => {
+                    let h = Math.floor(decimal);
+                    const m = Math.round((decimal - h) * 60);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    h = h ? h : 12;
+                    const mStr = m < 10 ? '0' + m : m;
+                    return `${h}:${mStr} ${ampm}`;
+                };
+
+                const timeRange = `${formatTime(adjustedStart)} - ${formatTime(adjustedEnd)}`;
+
+                btn.innerHTML = `
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-[10px] font-mono font-bold text-amber-500">${timeRange}</span>
+                        <span class="text-[9px] uppercase tracking-wider text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">Swap Into This Slot →</span>
+                    </div>
+                    <span class="text-xs text-slate-200 font-bold">${slot.title}</span>
+                    <p class="text-[10px] text-slate-400 truncate mt-0.5">${slot.desc}</p>
+                `;
+                slotsList.appendChild(btn);
             });
 
             if (slotsList.innerHTML === '') {
-                slotsList.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">No active swappable targets on this day matching this category.</div>`;
+                slotsList.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">No active spots found on this day.</div>`;
             }
 
             document.getElementById('swapper-modal').classList.remove('hidden');
@@ -1855,6 +2091,7 @@
                 dayData.slots[slotIndex].title = selectedSwapAlternative.title;
                 dayData.slots[slotIndex].desc = selectedSwapAlternative.desc;
                 dayData.slots[slotIndex].isCustomSwapped = true; 
+                dayData.slots[slotIndex].coords = selectedSwapAlternative.coords;
 
                 dayData.slots[slotIndex].highEnergy = {
                     act: selectedSwapAlternative.title,
@@ -2160,10 +2397,20 @@
         window.copyStartupPitch = copyStartupPitch;
         window.switchTab = switchTab;
         window.openSwapDirectly = openSwapDirectly;
+        
+        // Expose map, zoom and search functions
+        window.recenterMap = recenterMap;
+        window.triggerAISearch = triggerAISearch;
+        window.zoomToAIResult = zoomToAIResult;
+        window.clearAISearchResults = clearAISearchResults;
 
-        // Start Clock cycle updates
         detectActiveDayAndHour();
         startClockUpdater();
+
+        // Boot Leaflet Map layer
+        window.onload = function() {
+            initMap();
+        };
     </script>
 </body>
 </html>
